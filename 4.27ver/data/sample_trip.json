@@ -1,0 +1,608 @@
+{
+  "travel_itineraries": [
+      {
+        "metadata": {
+          "trip_id": "北京-8372",
+          "title": "北京经典3日游",
+          "destination": "beijing",
+          "total_days": 3,
+          "target_audience": "家庭游",
+          "start_date": "2025-01-01"
+        },
+        "daily_itinerary": [
+          {
+            "day": 1,
+            "date": "2025-01-01",
+            "hotel": {
+              "id": 4,
+              "name": "赛特饭店",
+              "lat": 39.906667,
+              "lon": 116.441675,
+              "price": 678,
+              "numbed": 3
+            },
+            "schedule": [
+              {
+                "id": 2,
+                "poi_type": "景点",
+                "name": "八达岭长城",
+                "type": "历史古迹",
+                "coordinates": [
+                  40.362639,
+                  116.024067
+                ],
+                "time": {
+                  "start": "09:00",
+                  "end": "11:30"
+                },
+                "duration_hours": 2.5,
+                "price": 40.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 3,
+                "poi_type": "餐厅",
+                "name": "北京璞瑄酒店·左岸",
+                "coordinates": [
+                  39.9237932,
+                  116.4101746
+                ],
+                "price": 733.0,
+                "cuisine": "西餐",
+                "recommended_food": [
+                  " "
+                ],
+                "time": {
+                  "start": "12:00",
+                  "end": "13:30"
+                },
+                "duration_hours": 1.5
+              },
+              {
+                "id": 8,
+                "poi_type": "景点",
+                "name": "慕田峪长城",
+                "type": "历史古迹",
+                "coordinates": [
+                  40.440146,
+                  116.575896
+                ],
+                "time": {
+                  "start": "14:00",
+                  "end": "17:00"
+                },
+                "duration_hours": 2.5,
+                "price": 45.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 6,
+                "poi_type": "餐厅",
+                "name": "四季民福烤鸭店(故宫店)",
+                "coordinates": [
+                  39.9145249,
+                  116.4028728
+                ],
+                "price": 180.0,
+                "cuisine": "北京菜",
+                "recommended_food": [
+                  " "
+                ],
+                "time": {
+                  "start": "18:00",
+                  "end": "20:00"
+                },
+                "duration_hours": 1.5
+              }
+            ]
+          },
+          {
+            "day": 2,
+            "date": "2025-01-02",
+            "hotel": {
+              "id": 6,
+              "name": "北京大兴国际机场木棉花酒店",
+              "lat": 39.516491,
+              "lon": 116.415634,
+              "price": 729,
+              "numbed": 2
+            },
+            "schedule": [
+              {
+                "id": 3,
+                "poi_type": "景点",
+                "name": "中国国家博物馆",
+                "type": "博物馆/纪念馆",
+                "coordinates": [
+                  39.911449,
+                  116.408018
+                ],
+                "time": {
+                  "start": "09:00",
+                  "end": "11:30"
+                },
+                "duration_hours": 2.5,
+                "price": 0.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 1,
+                "poi_type": "餐厅",
+                "name": "提督·TIDU(北京坊店)",
+                "coordinates": [
+                  39.8975569,
+                  116.3949362
+                ],
+                "price": 337.0,
+                "cuisine": "北京菜",
+                "recommended_food": [
+                  " "
+                ],
+                "time": {
+                  "start": "12:00",
+                  "end": "13:30"
+                },
+                "duration_hours": 1.5
+              },
+              {
+                "id": 1,
+                "poi_type": "景点",
+                "name": "故宫博物院",
+                "type": "历史古迹",
+                "coordinates": [
+                  39.924091,
+                  116.403414
+                ],
+                "time": {
+                  "start": "14:00",
+                  "end": "17:00"
+                },
+                "duration_hours": 2.5,
+                "price": 0.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 6,
+                "poi_type": "餐厅",
+                "name": "四季民福烤鸭店(故宫店)",
+                "coordinates": [
+                  39.9145249,
+                  116.4028728
+                ],
+                "price": 180.0,
+                "cuisine": "北京菜",
+                "recommended_food": [
+                  " "
+                ],
+                "time": {
+                  "start": "18:00",
+                  "end": "20:00"
+                },
+                "duration_hours": 1.5
+              }
+            ]
+          },
+          {
+            "day": 3,
+            "date": "2025-01-03",
+            "hotel": {
+              "id": 5,
+              "name": "嘉年华酒店(北京亦庄经济开发区店)",
+              "lat": 39.807812,
+              "lon": 116.52796,
+              "price": 335,
+              "numbed": 3
+            },
+            "schedule": [
+              {
+                "id": 1,
+                "poi_type": "景点",
+                "name": "故宫博物院",
+                "type": "历史古迹",
+                "coordinates": [
+                  39.924091,
+                  116.403414
+                ],
+                "time": {
+                  "start": "09:00",
+                  "end": "11:30"
+                },
+                "duration_hours": 2.5,
+                "price": 0.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 7,
+                "poi_type": "餐厅",
+                "name": "北京中国大饭店·夏宫",
+                "coordinates": [
+                  39.9104852,
+                  116.458885
+                ],
+                "price": 454.0,
+                "cuisine": "粤菜",
+                "recommended_food": [
+                  "扬州大煮干丝",
+                  "响油鳝糊",
+                  "XO酱虾皮炒萝卜糕",
+                  "烧鹅",
+                  "蟹粉小笼包",
+                  "焗餐包",
+                  "夏宫虾饺皇"
+                ],
+                "time": {
+                  "start": "12:00",
+                  "end": "13:30"
+                },
+                "duration_hours": 1.5
+              },
+              {
+                "id": 7,
+                "poi_type": "景点",
+                "name": "圆明园",
+                "type": "历史古迹",
+                "coordinates": [
+                  40.016191,
+                  116.309736
+                ],
+                "time": {
+                  "start": "14:00",
+                  "end": "17:00"
+                },
+                "duration_hours": 2.5,
+                "price": 0.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 9,
+                "poi_type": "餐厅",
+                "name": "北京王府半岛酒店·Jing餐厅",
+                "coordinates": [
+                  39.9149462,
+                  116.4164071
+                ],
+                "price": 1251.0,
+                "cuisine": "西餐",
+                "recommended_food": [
+                  "扇贝",
+                  "多佛龙利鱼",
+                  "鳕鱼",
+                  "热带风情",
+                  "熏羔羊排"
+                ],
+                "time": {
+                  "start": "18:00",
+                  "end": "20:00"
+                },
+                "duration_hours": 1.5
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "metadata": {
+          "trip_id": "南京-8742",
+          "title": "南京经典3日游",
+          "destination": "nanjing",
+          "total_days": 3,
+          "target_audience": "家庭游",
+          "start_date": "2025-01-01"
+        },
+        "daily_itinerary": [
+          {
+            "day": 1,
+            "date": "2025-01-01",
+            "hotel": {
+              "id": 5,
+              "name": "美仑国际酒店(南京禄口机场店)",
+              "lat": 31.733677,
+              "lon": 118.957325,
+              "price": 361,
+              "numbed": 1
+            },
+            "schedule": [
+              {
+                "id": 6,
+                "poi_type": "景点",
+                "name": "南京博物院",
+                "type": "博物馆/纪念馆",
+                "coordinates": [
+                  32.046791,
+                  118.831617
+                ],
+                "time": {
+                  "start": "09:00",
+                  "end": "11:30"
+                },
+                "duration_hours": 2.5,
+                "price": 0.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 3,
+                "poi_type": "餐厅",
+                "name": "南京香格里拉大酒店·江南灶",
+                "coordinates": [
+                  32.0782506,
+                  118.7828654
+                ],
+                "price": 334.0,
+                "cuisine": "江浙菜",
+                "recommended_food": [
+                  "慈城年糕烧大黄鱼",
+                  "蜜汁小番茄",
+                  "文思豆腐羹",
+                  "淮扬狮子头",
+                  "传统熏鱼",
+                  "淮扬小笼包",
+                  "江南灶红烧肉",
+                  "扬州炒饭",
+                  "佛跳墙",
+                  "文思豆腐"
+                ],
+                "time": {
+                  "start": "12:00",
+                  "end": "13:30"
+                },
+                "duration_hours": 1.5
+              },
+              {
+                "id": 5,
+                "poi_type": "景点",
+                "name": "钟山风景名胜区",
+                "type": "自然风光",
+                "coordinates": [
+                  32.069291,
+                  118.859406
+                ],
+                "time": {
+                  "start": "14:00",
+                  "end": "17:00"
+                },
+                "duration_hours": 2.5,
+                "price": 0.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 0,
+                "poi_type": "餐厅",
+                "name": "南京大牌档(夫子庙平江府店)",
+                "coordinates": [
+                  32.0208996,
+                  118.7926679
+                ],
+                "price": 74.0,
+                "cuisine": "江浙菜",
+                "recommended_food": [
+                  "招牌盐水鸭",
+                  "古法糖芋苗",
+                  "酒酿赤豆元宵",
+                  "清炖狮子头",
+                  "江米扣肉",
+                  "鸭血粉丝汤"
+                ],
+                "time": {
+                  "start": "18:00",
+                  "end": "20:00"
+                },
+                "duration_hours": 1.5
+              }
+            ]
+          },
+          {
+            "day": 2,
+            "date": "2025-01-02",
+            "hotel": {
+              "id": 8,
+              "name": "南京开元大酒店",
+              "lat": 32.060854,
+              "lon": 118.631036,
+              "price": 378,
+              "numbed": 3
+            },
+            "schedule": [
+              {
+                "id": 5,
+                "poi_type": "景点",
+                "name": "钟山风景名胜区",
+                "type": "自然风光",
+                "coordinates": [
+                  32.069291,
+                  118.859406
+                ],
+                "time": {
+                  "start": "09:00",
+                  "end": "11:30"
+                },
+                "duration_hours": 2.5,
+                "price": 0.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 5,
+                "poi_type": "餐厅",
+                "name": "南京苏宁钟山国际高尔夫酒店·紫金阁中餐厅",
+                "coordinates": [
+                  32.0788597,
+                  118.8774732
+                ],
+                "price": 368.0,
+                "cuisine": "江浙菜",
+                "recommended_food": [
+                  "松露粉文火牛肉",
+                  "九层塔咖喱煲大虾",
+                  "意大利黑醋汁松板肉",
+                  "蟹粉鱼脑",
+                  "金陵脆皮烧肉",
+                  "江南虾籽面"
+                ],
+                "time": {
+                  "start": "12:00",
+                  "end": "13:30"
+                },
+                "duration_hours": 1.5
+              },
+              {
+                "id": 6,
+                "poi_type": "景点",
+                "name": "南京博物院",
+                "type": "博物馆/纪念馆",
+                "coordinates": [
+                  32.046791,
+                  118.831617
+                ],
+                "time": {
+                  "start": "14:00",
+                  "end": "17:00"
+                },
+                "duration_hours": 2.5,
+                "price": 0.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 9,
+                "poi_type": "餐厅",
+                "name": "狮王府(新街口友谊店)",
+                "coordinates": [
+                  32.0414781,
+                  118.7821181
+                ],
+                "price": 141.0,
+                "cuisine": "江浙菜",
+                "recommended_food": [
+                  "招牌阳春面",
+                  "千盐水乳鸽（半只）",
+                  "南京盐水鸭",
+                  "王府包"
+                ],
+                "time": {
+                  "start": "18:00",
+                  "end": "20:00"
+                },
+                "duration_hours": 1.5
+              }
+            ]
+          },
+          {
+            "day": 3,
+            "date": "2025-01-03",
+            "hotel": {
+              "id": 1,
+              "name": "南京玄武饭店",
+              "lat": 32.070791,
+              "lon": 118.783697,
+              "price": 556,
+              "numbed": 2
+            },
+            "schedule": [
+              {
+                "id": 4,
+                "poi_type": "景点",
+                "name": "明孝陵",
+                "type": "历史古迹",
+                "coordinates": [
+                  32.052625,
+                  118.841221
+                ],
+                "time": {
+                  "start": "09:00",
+                  "end": "11:30"
+                },
+                "duration_hours": 2.5,
+                "price": 65.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 0,
+                "poi_type": "餐厅",
+                "name": "南京大牌档(夫子庙平江府店)",
+                "coordinates": [
+                  32.0208996,
+                  118.7926679
+                ],
+                "price": 74.0,
+                "cuisine": "江浙菜",
+                "recommended_food": [
+                  "招牌盐水鸭",
+                  "古法糖芋苗",
+                  "酒酿赤豆元宵",
+                  "清炖狮子头",
+                  "江米扣肉",
+                  "鸭血粉丝汤"
+                ],
+                "time": {
+                  "start": "12:00",
+                  "end": "13:30"
+                },
+                "duration_hours": 1.5
+              },
+              {
+                "id": 9,
+                "poi_type": "景点",
+                "name": "中山陵景区",
+                "type": "红色景点",
+                "coordinates": [
+                  32.060275,
+                  118.86104
+                ],
+                "time": {
+                  "start": "14:00",
+                  "end": "17:00"
+                },
+                "duration_hours": 2.5,
+                "price": 0.0,
+                "notes": [
+                  "建议提前预约"
+                ]
+              },
+              {
+                "id": 4,
+                "poi_type": "餐厅",
+                "name": "南京紫峰绿地洲际酒店·云端餐厅",
+                "coordinates": [
+                  32.0608006,
+                  118.7831487
+                ],
+                "price": 736.0,
+                "cuisine": "西餐",
+                "recommended_food": [
+                  "法式煎鹅肝",
+                  "波士顿龙虾",
+                  "煎虎虾",
+                  "蘑菇浓汤"
+                ],
+                "time": {
+                  "start": "18:00",
+                  "end": "20:00"
+                },
+                "duration_hours": 1.5
+              }
+            ]
+          }
+        ]
+      }
+  ]
+}

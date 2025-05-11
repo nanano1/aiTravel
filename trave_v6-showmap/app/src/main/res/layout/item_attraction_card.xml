@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="6dp"
+    app:cardElevation="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- 基本信息区域（收起状态） -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <!-- 拖拽手柄 -->
+            <ImageView
+                android:id="@+id/dragHandle"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center_vertical"
+                android:src="@android:drawable/ic_menu_sort_by_size"
+                android:tint="#757575"/>
+
+            <!-- 景点信息 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/attractionName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="景点名称"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/attractionTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="上午"
+                    android:textColor="#757575"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- 展开/收起按钮 -->
+            <ImageView
+                android:id="@+id/expandButton"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center_vertical"
+                android:src="@android:drawable/arrow_down_float"/>
+        </LinearLayout>
+
+        <!-- 详细信息区域（展开状态） -->
+        <LinearLayout
+            android:id="@+id/expandedView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:visibility="gone">
+
+            <!-- 时段选择 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="选择时段"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <RadioGroup
+                android:id="@+id/timeRadioGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <RadioButton
+                    android:id="@+id/morningRadio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="上午"
+                    android:checked="true"/>
+
+                <RadioButton
+                    android:id="@+id/afternoonRadio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="下午"
+                    android:layout_marginStart="16dp"/>
+
+                <RadioButton
+                    android:id="@+id/eveningRadio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="晚上"
+                    android:layout_marginStart="16dp"/>
+            </RadioGroup>
+
+            <!-- 交通方式 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="交通方式"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <EditText
+                android:id="@+id/transportEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="如何到达该景点？"
+                android:background="@android:drawable/editbox_background"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- 备注 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="备注"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <EditText
+                android:id="@+id/notesEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="添加备注（预约信息等）"
+                android:background="@android:drawable/editbox_background"
+                android:padding="8dp"
+                android:minLines="2"
+                android:gravity="top"/>
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView> 

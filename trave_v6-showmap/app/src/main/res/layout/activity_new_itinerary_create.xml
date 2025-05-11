@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="70dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- 第一步：行程标题和目的地 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="创建行程"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp"/>
+
+            <EditText
+                android:id="@+id/itineraryNameEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="行程标题（例如：北京文化三日游）"
+                android:textSize="18sp"
+                android:background="@android:drawable/editbox_background"
+                android:padding="12dp"
+                android:layout_marginBottom="16dp"/>
+
+            <EditText
+                android:id="@+id/itineraryLocationEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="目的地"
+                android:textSize="18sp"
+                android:background="@android:drawable/editbox_background"
+                android:padding="12dp"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- 第二步：添加旅行天数 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="添加旅行天数"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <Button
+                android:id="@+id/addDayButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="+ 添加天数"
+                android:textSize="16sp"
+                android:layout_marginBottom="16dp"
+                android:textColor="@color/white"
+                android:background="@color/orange"/>
+
+            <!-- 天数列表容器 -->
+            <LinearLayout
+                android:id="@+id/daysContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+                <!-- 这里会动态添加每日行程模块 -->
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- 底部保存按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="bottom"
+        android:background="#FFFFFF"
+        android:elevation="8dp">
+
+        <Button
+            android:id="@+id/saveItineraryButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="保存行程"
+            android:textSize="18sp"
+            android:padding="12dp"
+            android:layout_margin="16dp"
+            android:textColor="@color/white"
+            android:background="@color/orange"/>
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout> 

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <EditText
+            android:id="@+id/itineraryNameEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="行程单标题" />
+
+        <EditText
+            android:id="@+id/itineraryLocationEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="目的地" />
+
+        <EditText
+            android:id="@+id/dayNumberEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="第几天"
+            android:inputType="number" />
+
+        <EditText
+            android:id="@+id/visitOrderEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="顺序"
+            android:inputType="number" />
+
+    <AutoCompleteTextView
+        android:id="@+id/attractionNameEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:completionThreshold="1"
+        android:dropDownHeight="wrap_content"
+        android:dropDownWidth="match_parent"
+        android:hint="景点名称" />
+        <EditText
+            android:id="@+id/transportEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="到达方式" />
+
+    <Button
+        android:id="@+id/addButton"
+        android:layout_width="371dp"
+        android:layout_height="wrap_content"
+        android:text="添加景点"
+        android:textStyle="bold"
+        android:textSize="20dp"
+        android:textColor="@color/white"
+        android:background="@color/orange"
+        android:layout_marginTop="10dp"/>
+
+    <Button
+        android:layout_marginTop="10dp"
+        android:id="@+id/saveButton"
+        android:layout_width="371dp"
+        android:layout_height="wrap_content"
+        android:text="保存行程单"
+        android:textStyle="bold"
+        android:textSize="20dp"
+        android:textColor="@color/white"
+        android:background="@color/orange"/>
+    </LinearLayout>

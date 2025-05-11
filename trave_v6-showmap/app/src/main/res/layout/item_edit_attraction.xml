@@ -1,0 +1,41 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <EditText
+        android:id="@+id/attractionNameEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:hint="景点名称" />
+
+    <EditText
+        android:id="@+id/transportEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:hint="交通方式" />
+
+    <EditText
+        android:id="@+id/dayNumberEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:hint="第几天" />
+
+    <EditText
+        android:id="@+id/visitOrderEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:hint="顺序" />
+
+    <ImageView
+        android:id="@+id/deleteButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/trash3" />
+</LinearLayout>
+

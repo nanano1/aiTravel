@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.trave">
+    <meta-data
+        android:name="com.amap.api.v2.apikey"
+        android:value="846737ab9642aa52e33440c0da81d044"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!--允许访问网络，必选权限-->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--允许获取网络状态-->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!--允许获取wifi网络信息-->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
+    <!--允许写入扩展存储，用于搜索结果缓存，若无此权限则写到私有目录-->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+
+    <!--允许读设备等信息，用于问题排查-->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Travel"
+        android:usesCleartextTraffic="true"
+        tools:targetApi="31">
+
+        <activity android:name=".Activities.detailEditActivity" />
+
+        <activity android:name=".Activities.TripDetailActivity"
+            android:exported="false"/>
+        <activity android:name=".Activities.TripDetailMainActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".Activities.MainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activities.LoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activities.SiteDetailActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activities.MyRouteActivity"
+            android:exported="false" />
+        <activity android:name=".Activities.CreateItineraryActivity" />
+        <activity android:name=".Activities.NewItineraryCreateActivity" />
+        <activity
+            android:name=".Activities.IntroActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Travel">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+        <activity android:name=".Activities.AIChatActivity" />
+        <meta-data android:name="com.amap.api.v2.apikey" android:value="846737ab9642aa52e33440c0da81d044">
+        </meta-data>
+    </application>
+</manifest>
