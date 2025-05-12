@@ -179,6 +179,7 @@ def process_message(message, itinerary_info: dict) -> str:
     # 排序日程，确保按天数顺序
     payload['travel_itineraries'][0]['daily_itinerary'].sort(key=lambda x: x['day'])
     
+    print("处理后行程",payload)
     logger.info("已准备行程数据作为AI输入")
     
     # 2. 用新的 payload 创建上下文管理器和应用实例

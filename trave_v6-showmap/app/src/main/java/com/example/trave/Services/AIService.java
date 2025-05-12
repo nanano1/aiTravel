@@ -66,6 +66,7 @@ public class AIService {
         itineraryData.put("title", itinerary.getTittle());
         itineraryData.put("location", itinerary.getLocation());
         itineraryData.put("days", itinerary.getDays());
+        Log.d(TAG, "行程天数: " + itinerary.getDays());
         
         // 构建景点数组
         JSONArray attractionsArray = new JSONArray();
@@ -91,7 +92,7 @@ public class AIService {
         
         itineraryData.put("attractions", attractionsArray);
         requestBody.put("itinerary_data", itineraryData);
-        
+        Log.d(TAG, "行程数据: " + itineraryData.toString());
         // 发送请求并获取响应
         String response = sendRequest(requestBody);
         
