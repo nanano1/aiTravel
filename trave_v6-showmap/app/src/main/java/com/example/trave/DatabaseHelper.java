@@ -13,6 +13,7 @@ import com.example.trave.Domains.Sites;
 import com.example.trave.Domains.User;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -234,15 +235,35 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Cursor cursor = db.query(TABLE_ITINERARIES, null, selection, selectionArgs, null, null, null);
         Itinerary itinerary = null;
         if (cursor != null && cursor.moveToFirst()) {
+            // 获取所有列名
+            String[] columnNames = cursor.getColumnNames();
+            Log.d("DatabaseHelper", "列名: " + Arrays.toString(columnNames));
+
+            // 打印所有列的值
+            for (String columnName : columnNames) {
+                int columnIndex = cursor.getColumnIndex(columnName);
+                String value = cursor.getString(columnIndex);
+                Log.d("DatabaseHelper", columnName + ": " + value);
+            }
+
             String title = cursor.getString(cursor.getColumnIndex(COLUMN_ITINERARY_TITLE));
             String location = cursor.getString(cursor.getColumnIndex(COLUMN_ITINERARY_LOCATION));
             int days = cursor.getInt(cursor.getColumnIndex(COLUMN_ITINERARY_DAYS));
             int pic = ThreadLocalRandom.current().nextInt(1, 4);
-            int status=cursor.getInt(cursor.getColumnIndex(COLUMN_ITINERARY_STATUS));
-            long userId=cursor.getInt(cursor.getColumnIndex(COLUMN_ITINERARY_USER_ID));
+            int status = cursor.getInt(cursor.getColumnIndex(COLUMN_ITINERARY_STATUS));
+            long userId = cursor.getInt(cursor.getColumnIndex(COLUMN_ITINERARY_USER_ID));
 
-            itinerary = new Itinerary(itineraryId, title, location, "pic"+pic, days,userId,status);
+            Log.d("DatabaseHelper", "获取行程详情 - ID: " + itineraryId + 
+                  ", 标题: " + title + 
+                  ", 位置: " + location + 
+                  ", 天数: " + days + 
+                  ", 状态: " + status + 
+                  ", 用户ID: " + userId);
+
+            itinerary = new Itinerary(itineraryId, title, location, "pic"+pic, days, userId, status);
             cursor.close();
+        } else {
+            Log.e("DatabaseHelper", "未找到ID为 " + itineraryId + " 的行程");
         }
 
         return itinerary;

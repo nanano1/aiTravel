@@ -9,7 +9,7 @@ from langchain_core.prompts import PromptTemplate
 from travel_tools.schedule import calculate_poi_change, get_total_attractions, search_pois_by_center, calculate_distances_to_pois, rank_pois_by_utility, extract_intent_from_user_input, generate_recommendation_reason,  cluster_pois_kmeans, calculate_cluster_centers, build_optimized_itinerary,optimize_daily_route
 
 app_context = AppContext.get_instance()
-context_manager = app_context.context_manager
+
 
 def create_schedule_adjustment_graph_test() -> StateGraph:
     """创建整体调整子图"""
@@ -141,7 +141,19 @@ def process_input_node(state: TripState) -> TripState:
 def intent_recognition_function(state: TripState) -> TripState:
     """意图识别节点：提取用户的调整意图"""
     user_input = state["user_input"]
+    
+    context_manager = app_context.context_manager
+
+    # 直接使用context_manager中的current_trip_id
+    print(f"当前context_manager使用的trip_id: {context_manager.current_trip_id}")
+    
+    # 获取行程数据
     trip_json = context_manager.get_current_trip()
+    print(f"获取到的行程数据: {trip_json}")
+    
+    # 如果没有获取到行程数据，输出警告
+    if not trip_json:
+        print(f"⚠️ 警告：无法获取行程数据，使用context_manager中的默认行程ID: {context_manager.current_trip_id}")
 
     # 调用封装的函数提取意图
     extracted_info = extract_intent_from_user_input(user_input, trip_json, app_context)
@@ -164,7 +176,7 @@ def intent_recognition_function(state: TripState) -> TripState:
 def calculate_poi_change_node(state: TripState) -> TripState:
     """计算POI变化节点：处理天数或节奏变更请求，计算需要增减的POI数量"""
     print("进入计算POI变化节点")
-    
+    context_manager = app_context.context_manager
     # 获取当前行程数据
     trip_json = context_manager.get_current_trip()
     current_days = trip_json["metadata"]["total_days"]
@@ -213,6 +225,7 @@ def calculate_poi_change_node(state: TripState) -> TripState:
     }
 
 def add_poi_node(state: TripState) -> TripState:
+    context_manager = app_context.context_manager
     """添加POI节点：查找并推荐新POI"""
     print("进入添加POI节点")
     
@@ -339,6 +352,7 @@ def add_poi_node(state: TripState) -> TripState:
         }
 
 def remove_poi_node(state: TripState) -> TripState:
+    context_manager = app_context.context_manager
     """删除POI节点：根据效用评分删除最不合适的POI"""
     print("进入删除POI节点")
     
@@ -449,6 +463,7 @@ def remove_poi_node(state: TripState) -> TripState:
     }
 
 def classify_followup_node(state: TripState) -> TripState:
+    context_manager = app_context.context_manager
     """分类用户后续输入"""
     user_input = state["user_input"]
     action_type = state["flow_state"].get("action_type", "")
@@ -519,6 +534,7 @@ def classify_followup_node(state: TripState) -> TripState:
     }
 
 def handle_selection_node(state: TripState) -> TripState:
+    context_manager = app_context.context_manager
     """处理用户选择"""
     user_input = state["user_input"]
     action_type = state["flow_state"].get("action_type", "")
@@ -650,6 +666,7 @@ def update_preferences_node(state: TripState) -> TripState:
     }
 
 def optimize_route_node(state: TripState) -> TripState:
+    context_manager = app_context.context_manager
     """优化路线节点"""
     print("进入优化路线节点")
     
@@ -733,7 +750,7 @@ def optimize_route_node(state: TripState) -> TripState:
         
         # 更新行程JSON
         trip_json["daily_itinerary"] = new_daily_itinerary
-        
+        print(f"优化后的行程: {trip_json}")
         # 生成优化说明
         msg = "✅ 已完成行程优化：\n"
         msg += "1. 将地理位置相近的景点安排在同一天\n"

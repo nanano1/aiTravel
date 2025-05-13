@@ -145,8 +145,7 @@ def initial_user_input(state: TripState) -> TripState:
             "flow_state": {**state["flow_state"], "active_flow": "景点替换"}
         }
 
-    if state.get("current_trip_id"):
-        context_manager.set_current_trip(state["current_trip_id"])
+    # 直接使用context_manager
     print("提取意图...")
     intent = extract_modification_intent(state["user_input"], context_manager.get_current_trip())
 

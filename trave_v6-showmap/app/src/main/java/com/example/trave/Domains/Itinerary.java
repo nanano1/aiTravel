@@ -23,6 +23,7 @@ public class Itinerary implements Parcelable {
         this.title = title;
         this.location = location;
         this.pic = pic;
+        this.days=days;
         this.userId = userId;  // 设置用户ID
         this.status = status;  // 设置发布状态
     }
@@ -109,6 +110,7 @@ public class Itinerary implements Parcelable {
     }
 
     public void setDays(int days) {
+
         this.days = days;
     }
 

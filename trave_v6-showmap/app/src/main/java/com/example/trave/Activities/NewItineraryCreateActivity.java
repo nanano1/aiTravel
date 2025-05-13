@@ -452,6 +452,7 @@ public class NewItineraryCreateActivity extends AppCompatActivity implements Inp
         // 更新行程的总天数
         newItinerary.setId(itineraryId);
         newItinerary.setDays(daysList.size());
+
         dbHelper.updateItinerary(newItinerary);
         
         // 创建返回结果

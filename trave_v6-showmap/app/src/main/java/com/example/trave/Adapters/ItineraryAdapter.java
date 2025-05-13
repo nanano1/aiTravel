@@ -47,7 +47,7 @@ public class ItineraryAdapter extends RecyclerView.Adapter<ItineraryAdapter.View
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Log.d("ItineraryAdapter", "Days: " + items.get(position).getLocation());
+        Log.d("ItineraryAdapter", "Days: " + items.get(position).getDays());
         holder.tittleText.setText(items.get(position).getTittle());
         holder.locationTxt.setText(items.get(position).getLocation());
 

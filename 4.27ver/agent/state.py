@@ -12,8 +12,6 @@ class TripState(TypedDict):
     """旅行系统的全局状态"""
     # 基本信息
     user_input: str  # 用户当前输入
-    current_trip_id: Optional[str]  # 当前选中的行程ID
-    current_city: Optional[str]  # 当前城市
     
     # 上下文和历史
     conversation_history: List[Dict]  # 对话历史

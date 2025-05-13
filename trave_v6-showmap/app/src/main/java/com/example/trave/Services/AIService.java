@@ -50,11 +50,20 @@ public class AIService {
         
         // 获取行程和景点数据
         Itinerary itinerary = dbHelper.getItineraryById(itineraryId);
-        ArrayList<ItineraryAttraction> attractions = dbHelper.getItineraryAttractions(itineraryId);
         
         if (itinerary == null) {
+            Log.e(TAG, "获取行程失败：itinerary为null");
             throw new Exception("找不到指定的行程");
         }
+        
+        // 详细打印行程信息
+        Log.d(TAG, "行程详细信息 - " +
+              "ID: " + itinerary.getId() + 
+              ", 标题: " + itinerary.getTittle() + 
+              ", 位置: " + itinerary.getLocation() + 
+              ", 天数: " + itinerary.getDays());
+        
+        ArrayList<ItineraryAttraction> attractions = dbHelper.getItineraryAttractions(itineraryId);
         
         // 构建请求体
         JSONObject requestBody = new JSONObject();

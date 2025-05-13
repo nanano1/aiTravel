@@ -27,24 +27,31 @@ def process_message(message, itinerary_info: dict) -> str:
     - 如果涉及数据更新，返回字典，包含消息和更新的数据
     """
     logger.info(f"处理消息: {message}")
-    logger.info(f"行程信息: {itinerary_info}")
     
     # 提取行程ID
     trip_id = str(itinerary_info.get('itinerary_id'))
+    logger.info(f"提取的行程ID: {trip_id}")
     
     # 检查是否已有该行程ID的会话实例
     if trip_id in active_sessions:
         logger.info(f"使用现有会话实例，行程ID: {trip_id}")
         app = active_sessions[trip_id]
         
-        # 重要：确保当前会话使用正确的行程ID
-        # 这将解决使用错误行程ID的问题
-        app.context_manager.current_trip_id = trip_id
-        app.state['current_trip_id'] = trip_id
+        # 重要：确保context_manager中使用正确的行程ID
+        # 注意：只在context_manager中设置，不再设置state['current_trip_id']
+        result = app.context_manager.set_current_trip(trip_id)
+        logger.info(f"设置context_manager行程ID结果: {result}")
+        
+        # 打印当前行程数据，检查是否能正确获取
+        trip_data = app.context_manager.get_current_trip()
+        if trip_data:
+            logger.info(f"成功获取行程数据: {trip_data.get('metadata', {}).get('title', '未知')}")
+        else:
+            logger.warning(f"⚠️ 无法获取行程数据，请检查行程ID: {trip_id}")
         
         # 处理用户输入
         response = app.process_input(message)
-        
+        print(f"处理后的响应: {response}")
         # 检查是否有更新的行程数据或其他类型的数据
         if isinstance(response, dict):
             # 检查是否有行程更新数据
@@ -185,9 +192,12 @@ def process_message(message, itinerary_info: dict) -> str:
     # 2. 用新的 payload 创建上下文管理器和应用实例
     cm = TripContextManager(payload)
     
-    # 重要：直接设置当前行程ID，而不通过set_current_trip方法（避免ID匹配问题）
-    cm.current_trip_id = trip_id
-    
+    # 重要：使用set_current_trip方法设置当前行程ID
+    logger.info(f"行程ID: {trip_id}")
+    # 确保通过set_current_trip方法设置行程ID
+    result = cm.set_current_trip(trip_id)
+    logger.info(f"设置行程ID结果: {result}")
+
     # 更新AppContext中的context_manager实例，确保其他模块使用最新的context_manager
     app_context = AppContext.get_instance()
     app_context.context_manager = cm
@@ -195,8 +205,7 @@ def process_message(message, itinerary_info: dict) -> str:
     # 3. 创建LangGraphApp实例，使用修改后的context_manager
     app = LangGraphApp(session_id='flask_session_'+trip_id, context_manager=cm)
     
-    # 强制初始化应用
-    app.state['current_trip_id'] = trip_id
+    # 更新状态，初始化应用，但不再设置current_trip_id
     app.initialized = True
     
     # 保存会话实例

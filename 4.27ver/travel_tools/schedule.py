@@ -17,11 +17,20 @@ def get_total_attractions(trip_json):
     Returns:
         int: 总景点数
     """
-    total_attractions = 0
-    for day in trip_json["daily_itinerary"]:
-        attractions_count = sum(1 for item in day["schedule"] if item["poi_type"] == "景点")
-        total_attractions += attractions_count
-    return total_attractions
+    # 处理trip_json为None的情况
+    if trip_json is None:
+        print("警告: 行程数据为None，返回默认值0")
+        return 0
+        
+    try:
+        total_attractions = 0
+        for day in trip_json.get("daily_itinerary", []):
+            attractions_count = sum(1 for item in day.get("schedule", []) if item.get("poi_type") == "景点")
+            total_attractions += attractions_count
+        return total_attractions
+    except (KeyError, TypeError, AttributeError) as e:
+        print(f"计算景点数量出错: {e}")
+        return 0
 
 def calculate_poi_change(existing_pois, current_days, target_days, max_per_day):
     expected_total = target_days * max_per_day
@@ -583,10 +592,21 @@ def rank_pois_by_utility(pois, existing_pois, prefer_tags=None, weights=None, ll
 
 def extract_intent_from_user_input(user_input: str, trip_json: dict, app_context: AppContext) -> dict:
     """提取用户意图"""
-    # 计算原计划天数和每日平均景点数
-    base_days = trip_json["metadata"]["total_days"]
-    daily_pois = get_total_attractions(trip_json) / base_days
-    print("平均景点数", daily_pois)
+    # 处理trip_json为None的情况
+    if trip_json is None:
+        print("警告: 行程数据为None，使用默认值")
+        base_days = 3  # 默认天数
+        daily_pois = 2  # 默认每日景点
+    else:
+        # 计算原计划天数和每日平均景点数
+        try:
+            base_days = trip_json["metadata"]["total_days"]
+            daily_pois = get_total_attractions(trip_json) / base_days
+            print("平均景点数", daily_pois)
+        except (KeyError, TypeError, ZeroDivisionError) as e:
+            print(f"获取行程数据失败: {e}，使用默认值")
+            base_days = 3  # 默认天数
+            daily_pois = 2  # 默认每日景点
 
     # 使用 LLM 提取意图
     intent_prompt = PromptTemplate.from_template("""
@@ -609,7 +629,7 @@ def extract_intent_from_user_input(user_input: str, trip_json: dict, app_context
     ---|---
     "我不喜欢历史景点" | {{"style_replace": {{"历史": ["文化", "艺术"]}} }}
     "每天别超过2个景点" | {{"daily_limit": 2}}
-    "只玩三天" | {{"adjust_type": "compress_days", "target_days": 3}}
+    "只玩三天" | {{"adjust_type": "change_days", "target_days": 3}}
     "我想轻松点" | {{"daily_limit": 原来的景点数{daily_pois}-1, "prefer_tags": ["自然", "休闲"]}} 
     "我还想去798艺术区" | {{"add_pois": ["798艺术区"], "prefer_tags": ["艺术"]}}
 

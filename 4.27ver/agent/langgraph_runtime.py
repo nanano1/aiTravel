@@ -18,7 +18,6 @@ class LangGraphApp:
         return {
             "user_input": "",
             "active_flow": None,
-            "current_trip_id": None,
             "target_poi": None,
             "candidates": [],
             "user_preferences": {
@@ -45,11 +44,6 @@ class LangGraphApp:
         result = self.context_manager.set_current_trip(trip_id)
         
         if result.startswith("✅"):
-            # 更新状态中的行程ID
-            self.state = {
-                **self.state,
-                "current_trip_id": trip_id
-            }
             self.initialized = True
             
         return result

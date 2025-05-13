@@ -72,7 +72,7 @@ def intent_recognition_function(state: TripState) -> TripState:
     ---|---
     "我不喜欢历史景点" | {{"style_replace": {{"历史": ["文化", "艺术"]}} }}
     "每天别超过2个景点" | {{"daily_limit": 2}}
-    "只玩三天" | {{"adjust_type": "compress_days", "target_days": 3}}
+    "只玩三天" | {{"adjust_type": "change_days", "target_days": 3}}
     "我想轻松点" | {{"daily_limit": 原来的景点数{daily_pois}-1, "prefer_tags": ["自然", "休闲"]}} 
     "我还想去798艺术区" | {{"add_pois": ["798艺术区"], "prefer_tags": ["艺术"]}}
 
