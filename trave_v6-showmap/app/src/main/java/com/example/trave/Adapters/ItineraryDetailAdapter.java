@@ -195,7 +195,7 @@ public class ItineraryDetailAdapter extends RecyclerView.Adapter<ItineraryDetail
         this.attractions = newAttractions;
         notifyDataSetChanged();
     }
-    
+
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvDay;
         TextView tvOrder;

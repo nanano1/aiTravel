@@ -20,6 +20,9 @@ public class RecommendedRestaurant {
     private double priceLevel;
     private double latitude;
     private double longitude;
+    private String telephone;
+    private String shopHours;
+    private String commentNum;
     private JSONObject originalData; // 保存原始JSON数据
 
     public RecommendedRestaurant(JSONObject jsonObject) {
@@ -29,24 +32,31 @@ public class RecommendedRestaurant {
             // 基本信息
             this.id = jsonObject.optString("uid", "");
             this.name = jsonObject.optString("name", "未知餐厅");
-            this.rating = jsonObject.optDouble("rating", 4.5);
-            this.distance = jsonObject.optString("distance", "1km");
-            this.reason = jsonObject.optString("reason", "");
             this.cuisineType = jsonObject.optString("label", "未知菜系");
-            this.imageUrl = jsonObject.optString("image_url", "");
+            this.reason = jsonObject.optString("reason", "");
             this.address = jsonObject.optString("address", "未知地址");
+            this.telephone = jsonObject.optString("telephone", "无电话");
             
-            // 价格处理 - 直接使用price字段
-            this.priceLevel = jsonObject.optDouble("price", 0);
+            // 评分和坐标
+            this.rating = jsonObject.optDouble("overall_rating", 4.5);
+            this.latitude = jsonObject.optDouble("latitude", 0);
+            this.longitude = jsonObject.optDouble("longitude", 0);
             
-            // 坐标处理
-            if (jsonObject.has("coordinates")) {
-                JSONArray coords = jsonObject.getJSONArray("coordinates");
-                if (coords.length() >= 2) {
-                    this.latitude = coords.getDouble(0);
-                    this.longitude = coords.getDouble(1);
-                }
+            // 处理res_detail中的信息
+            if (jsonObject.has("res_detail") && !jsonObject.isNull("res_detail")) {
+                JSONObject resDetail = jsonObject.getJSONObject("res_detail");
+                this.priceLevel = resDetail.optDouble("price", 0);
+                this.shopHours = resDetail.optString("shop_hours", "暂无营业时间");
+                this.commentNum = resDetail.optString("comment_num", "0");
+            } else {
+                this.priceLevel = 0;
+                this.shopHours = "暂无营业时间";
+                this.commentNum = "0";
             }
+            
+            // 设置默认图片URL和距离
+            this.imageUrl = "";
+            this.distance = "未知";
             
             Log.d(TAG, "成功解析餐厅数据: " + name);
             
@@ -56,7 +66,7 @@ public class RecommendedRestaurant {
             this.id = "";
             this.name = "未知餐厅";
             this.rating = 4.5;
-            this.distance = "1km";
+            this.distance = "未知";
             this.reason = "";
             this.cuisineType = "未知菜系";
             this.imageUrl = "";
@@ -64,12 +74,16 @@ public class RecommendedRestaurant {
             this.priceLevel = 0;
             this.latitude = 0;
             this.longitude = 0;
+            this.telephone = "无电话";
+            this.shopHours = "暂无营业时间";
+            this.commentNum = "0";
         }
     }
 
     public RecommendedRestaurant(String id, String name, double rating, String distance, String reason,
                                 String cuisineType, String imageUrl, String address,
-                                double priceLevel, double latitude, double longitude) {
+                                double priceLevel, double latitude, double longitude,
+                                String telephone, String shopHours, String commentNum) {
         this.id = id;
         this.name = name;
         this.rating = rating;
@@ -81,6 +95,9 @@ public class RecommendedRestaurant {
         this.priceLevel = priceLevel;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.telephone = telephone;
+        this.shopHours = shopHours;
+        this.commentNum = commentNum;
     }
 
     // 获取原始JSON数据
@@ -91,19 +108,23 @@ public class RecommendedRestaurant {
                 JSONObject data = new JSONObject();
                 data.put("uid", id);
                 data.put("name", name);
-                data.put("rating", rating);
+                data.put("overall_rating", rating);
                 data.put("distance", distance);
                 data.put("reason", reason);
                 data.put("label", cuisineType);
-                data.put("image_url", imageUrl);
                 data.put("address", address);
-                data.put("price", priceLevel);
+                data.put("telephone", telephone);
+                
+                // 添加res_detail信息
+                JSONObject resDetail = new JSONObject();
+                resDetail.put("price", priceLevel);
+                resDetail.put("shop_hours", shopHours);
+                resDetail.put("comment_num", commentNum);
+                data.put("res_detail", resDetail);
                 
                 // 添加坐标
-                JSONArray coordinates = new JSONArray();
-                coordinates.put(latitude);
-                coordinates.put(longitude);
-                data.put("coordinates", coordinates);
+                data.put("latitude", latitude);
+                data.put("longitude", longitude);
                 
                 return data;
             } catch (Exception e) {
@@ -200,5 +221,29 @@ public class RecommendedRestaurant {
 
     public void setLongitude(double longitude) {
         this.longitude = longitude;
+    }
+    
+    public String getTelephone() {
+        return telephone;
+    }
+    
+    public void setTelephone(String telephone) {
+        this.telephone = telephone;
+    }
+    
+    public String getShopHours() {
+        return shopHours;
+    }
+    
+    public void setShopHours(String shopHours) {
+        this.shopHours = shopHours;
+    }
+    
+    public String getCommentNum() {
+        return commentNum;
+    }
+    
+    public void setCommentNum(String commentNum) {
+        this.commentNum = commentNum;
     }
 } 

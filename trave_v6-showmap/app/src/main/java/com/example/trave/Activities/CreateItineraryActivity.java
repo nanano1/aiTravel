@@ -235,7 +235,7 @@ public class CreateItineraryActivity extends AppCompatActivity implements Inputt
 
             // 保存或获取景点
             long siteId = dbHelper.addOrGetSite(selectedPoi, attractionName, latitude, longitude, address,
-                    businessArea, tel, website, typeDesc, photos);
+                    rating, tel, website, typeDesc, photos);
             Log.d("CreateItineraryActivity", "获取到的 siteId: " + siteId);
 
             if (siteId == -1) {

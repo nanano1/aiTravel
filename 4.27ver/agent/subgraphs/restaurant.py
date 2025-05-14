@@ -47,6 +47,7 @@ def create_restaurant_graph():
         path_map={
             "选择": "handle_selection",
             "偏好": "update_preferences",
+            "退出": "handle_invalid",
             "无效": "handle_invalid"
         }
     )
@@ -112,7 +113,7 @@ def classify_followup_input(state: TripState) -> TripState:
 
     请根据输入内容分类：
     - 如果用户表示想要更换为{pois}里的其中一个餐厅，请回复 "选择"
-    - 如果用户提供了新的偏好，请回复 "偏好"
+    - 如果用户提供了新的要求偏好，比如预算,餐厅类型,评分维度等新的要求,请回复 "偏好"
     - 如果用户表示不想继续这个推荐过程，或者想做其他事情，请回复 "退出"
     - 如果输入无效或模糊，但似乎还与餐厅选择有关，请回复 "无效"
 
@@ -129,7 +130,7 @@ def classify_followup_input(state: TripState) -> TripState:
             **state,
             "flow_state": {
                 "on_progress": False,  # 将on_progress设置为False，退出当前推荐流程
-                "followup_action": "无效"  # 依然使用"无效"作为路由的值，但会在handle_invalid_input处理
+                "followup_action": "退出"  # 依然使用"无效"作为路由的值，但会在handle_invalid_input处理
             },
             "response": "好的，我们可以稍后再继续餐厅推荐。您有什么其他需要帮助的吗？",
             "should_continue": False  # 标记不应该继续当前流程
@@ -235,17 +236,19 @@ def generate_recommendations(state: TripState) -> TripState:
     # 构建响应文本
     response_text = "我为您找到了以下几家餐厅作为替代选择：\n\n"
     
-    for i, rec in enumerate(recommended_pois[:5], 1):  # 限制最多5个推荐
-        response_text += f"{i}. {rec['name']} - {rec['label']}\n"
-        response_text += f"   价格：{rec['price']}元/人左右\n"
-        response_text += f"   推荐理由：{rec['reason']}\n\n"
+#    for i, rec in enumerate(recommended_pois[:5], 1):  # 限制最多5个推荐
+#       response_text += f"{i}. {rec['name']} - {rec['label']}\n"
+#       response_text += f"   价格：{rec['price']}元/人左右\n"
+#       response_text += f"   推荐理由：{rec['reason']}\n\n"
     
     response_text += "您可以选择其中一家作为替代，或者告诉我您的其他偏好，我可以重新推荐。"
     print(response_text)
     # 构建结构化JSON数据
     json_data = {
         "data_type": "restaurant_recommendations",
-        "recommendations": recommended_pois[:5]
+        "res_info":target_poi.get("res_info",None),
+        "day_info":target_poi.get("day_info",None),
+        "recommendations": recommended_pois
     }
     
     # 在响应中嵌入JSON数据
@@ -385,7 +388,7 @@ def handle_invalid_input(state: TripState) -> TripState:
         "response": msg,
         "conversation_history": history,
         "flow_state": {
-            "on_progress": False,
+            "on_progress": True,
             "active_flow": active_flow  # 保留原有active_flow值
         }
     }

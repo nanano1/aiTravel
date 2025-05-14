@@ -7,7 +7,7 @@ from typing import Dict, List, Any
 import math
 from langchain_core.prompts import PromptTemplate
 from travel_tools.schedule import calculate_poi_change, get_total_attractions, search_pois_by_center, calculate_distances_to_pois, rank_pois_by_utility, extract_intent_from_user_input, generate_recommendation_reason,  cluster_pois_kmeans, calculate_cluster_centers, build_optimized_itinerary,optimize_daily_route
-
+import numpy as np
 app_context = AppContext.get_instance()
 
 
@@ -191,8 +191,14 @@ def calculate_poi_change_node(state: TripState) -> TripState:
         
     # 获取当前所有景点
     existing_pois = []
+    coordinates = []  # 用于存储所有POI的坐标
     for day in trip_json["daily_itinerary"]:
-        existing_pois.extend([item for item in day["schedule"] if item["poi_type"] == "景点"])
+        for item in day["schedule"]:
+            if item["poi_type"] == "景点":
+                existing_pois.append(item)
+                if "coordinates" in item:  # 确保有坐标
+                    coordinates.append(item["coordinates"])
+    
     print(f"现有POI数量: {len(existing_pois)}")
     
     # 计算需要改变的景点数量
@@ -205,6 +211,14 @@ def calculate_poi_change_node(state: TripState) -> TripState:
     else:
         print("景点数量无需调整，将进行路线优化")
     
+    # 计算所有POI的中心点
+    if coordinates:
+        center = np.mean(coordinates, axis=0).tolist()  # 计算中心点并转换为列表
+    else:
+        center = None  # 如果没有有效的坐标，设置为None
+
+
+
     # 查找行程单中的最后一个POI作为搜索中心点
     last_poi = None
     last_day = trip_json["daily_itinerary"][-1]  # 最后一天
@@ -220,7 +234,8 @@ def calculate_poi_change_node(state: TripState) -> TripState:
             **state["flow_state"],
             "poi_change": poi_change,
             "last_poi": last_poi,
-            "existing_pois": existing_pois
+            "existing_pois": existing_pois,
+            "center": center
         }
     }
 
@@ -234,7 +249,8 @@ def add_poi_node(state: TripState) -> TripState:
     last_poi = state["flow_state"]["last_poi"]
     existing_pois = state["flow_state"]["existing_pois"]
     prefer_tags = state["flow_state"]["prefer_tags"]
-    
+    center = state["flow_state"]["center"]
+    print("搜索中心",center)
     # 确保poi_change是整数
     try:
         poi_change = int(poi_change)
@@ -245,10 +261,8 @@ def add_poi_node(state: TripState) -> TripState:
     
     # 如果找到了最后一个POI，以它为中心搜索周边景点
     recommended_pois = []
-    if last_poi:
-        print(f"以最后一个POI '{last_poi['name']}' 为中心搜索周边景点...")
-        center_coordinates = last_poi["coordinates"]
-        nearby_pois = search_pois_by_center(center_coordinates)
+    if center:
+        nearby_pois = search_pois_by_center(center)
         print("nearby_pois",nearby_pois)
         print(f"搜索到 {len(nearby_pois)} 个周边景点")
         
@@ -276,12 +290,16 @@ def add_poi_node(state: TripState) -> TripState:
                 )
                 
                 recommended_pois_with_reason.append({
+                    "uid": poi['poi_id'],
+                    "tel": poi['tel'],
+                    "opentime_week": poi['opentime_week'],
                     "name": poi['name'],
                     "type": poi['type'],
                     "rating": poi['rating'],
                     "utility_score": poi['utility_score'],
                     "recommendation_reason": recommendation_reason,
-                    "coordinates": poi.get('coordinates', [0, 0]),
+                    "lat": poi['coordinates'][0],
+                    "lng": poi['coordinates'][1],
                     "address": poi.get('address', ''),
                     "image_url": poi.get('image_url', ''),
                     "distance": poi.get('distance', '未知')
@@ -538,8 +556,22 @@ def handle_selection_node(state: TripState) -> TripState:
     """处理用户选择"""
     user_input = state["user_input"]
     action_type = state["flow_state"].get("action_type", "")
-    recommended_pois = context_manager.get_recommendations()
+    existing_pois = state["flow_state"].get("existing_pois", [])
+    recommended_pois_from_context = context_manager.get_recommendations()
     
+    if not recommended_pois_from_context:
+        print("警告: 在 handle_selection_node 中未找到推荐的 POI 列表。")
+        # 可能直接从 optimize_route 过来的，或者流程异常
+        return {
+            **state,
+            "flow_state": {
+                **state["flow_state"],
+                "updated_full_poi_list": existing_pois, # 没有选择，使用现有POI
+                "on_progress": False,
+            },
+            "response": "未能处理选择，将尝试直接优化当前行程。",
+            "conversation_history": state.get("conversation_history", []) + [{"role": "assistant", "content": "未能处理选择，将尝试直接优化当前行程。"}]
+        }
     # 使用LLM提取用户选择的POI
     prompt = PromptTemplate.from_template("""
     # 背景信息
@@ -557,7 +589,7 @@ def handle_selection_node(state: TripState) -> TripState:
     
     # 构造POI列表文本
     pois_text = ""
-    for i, poi in enumerate(recommended_pois, 1):
+    for i, poi in enumerate(recommended_pois_from_context, 1):
         pois_text += f"{i}. {poi['name']}\n"
     
     # 使用LLM提取用户选择
@@ -568,9 +600,25 @@ def handle_selection_node(state: TripState) -> TripState:
     # 解析选择结果
     try:
         selected_indices = json.loads(selection_text)
-        selected_pois = [recommended_pois[i-1] for i in selected_indices if 0 < i <= len(recommended_pois)]
+        selected_pois = [recommended_pois_from_context[i-1] for i in selected_indices if 0 < i <= len(recommended_pois_from_context)]
     except:
         selected_pois = []
+    
+    # 整合POI列表
+    updated_full_poi_list = existing_pois.copy()
+    
+    if selected_pois:
+        if action_type == "add_poi":
+            # 添加新选择的POI到现有列表
+            for poi in selected_pois:
+                # 检查是否已存在相同名称的POI，避免重复添加
+                if not any(existing_poi.get("name") == poi.get("name") for existing_poi in existing_pois):
+                    updated_full_poi_list.append(poi)
+        elif action_type == "remove_poi":
+            # 从现有列表中移除选择的POI
+            poi_names_to_remove = [poi.get("name") for poi in selected_pois]
+            updated_full_poi_list = [poi for poi in existing_pois 
+                                    if poi.get("name") not in poi_names_to_remove]
     
     # 构建响应
     if selected_pois:
@@ -607,6 +655,7 @@ def handle_selection_node(state: TripState) -> TripState:
         "flow_state": {
             **state["flow_state"],
             "selected_pois": selected_pois,
+            "updated_full_poi_list": updated_full_poi_list,  # 添加整合后的完整POI列表
             "on_progress": False,  # 用户已做出选择，流程进入下一阶段
             "data_type": "selected_pois" if selected_pois else None,
             "data": selected_pois if selected_pois else None
@@ -674,12 +723,16 @@ def optimize_route_node(state: TripState) -> TripState:
     trip_json = context_manager.get_current_trip()
     history = state.get("conversation_history", [])
     
-    # 获取所有POI
-    all_pois = []
-    for day in trip_json["daily_itinerary"]:
-        for item in day["schedule"]:
-            if item["poi_type"] == "景点":
-                all_pois.append(item)
+    # 获取POI列表
+    # 优先使用handle_selection_node传递的updated_full_poi_list
+    all_pois = state["flow_state"].get("updated_full_poi_list", [])
+    
+    # 如果没有传递updated_full_poi_list，则从当前行程中提取POI
+    if not all_pois:
+        for day in trip_json["daily_itinerary"]:
+            for item in day["schedule"]:
+                if item["poi_type"] == "景点":
+                    all_pois.append(item)
     
     if not all_pois:
         msg = "当前行程中没有景点，无需优化。"
@@ -707,74 +760,81 @@ def optimize_route_node(state: TripState) -> TripState:
         print(f"开始KMeans聚类... 每天最多{pois_per_day}个POI")
         clusters = cluster_pois_kmeans(all_pois, total_days, pois_per_day)
         
-        # 2. 构建新的行程，保持原始行程格式
+        # 2. 构建新的行程，按照用户要求的格式
         print("构建优化后的行程...")
-        new_daily_itinerary = []
         
-        # 遍历原始行程，替换POI部分但保留其他内容
-        for day_idx, day_data in enumerate(trip_json["daily_itinerary"]):
-            if day_idx < len(clusters):
-                # 提取当天的非POI项目
-                non_poi_items = [item for item in day_data.get("schedule", []) 
-                              if item.get("poi_type") != "景点"]
-                
-                # 获取聚类后的POI并优化访问顺序
-                day_pois = clusters[day_idx]
-                optimized_pois = []
-                
-                if day_pois:
-                    # 优化当天POI的访问顺序
-                    optimized_pois = optimize_daily_route(day_pois)
-                
-                # 构建新的行程项目列表，保留原POI的所有属性
-                poi_items = []
-                for poi in optimized_pois:
-                    # 创建新的POI项，但保留原有所有属性
-                    poi_item = {}
-                    for key, value in poi.items():
-                        poi_item[key] = value
-                    
-                    poi_items.append(poi_item)
-                
-                # 合并POI和非POI项目
-                new_schedule = non_poi_items + poi_items
-                
-                # 创建新的天数据，完全复制原始数据结构
-                new_day = day_data.copy()
-                new_day["schedule"] = new_schedule
-                
-                new_daily_itinerary.append(new_day)
-            else:
-                # 如果聚类数少于原始天数，保持剩余天原样
-                new_daily_itinerary.append(day_data)
+        # 准备itinerary数据结构
+        itinerary_id = trip_json["metadata"].get("itinerary_id", 1)
+        title = trip_json["metadata"].get("title", f"行程{itinerary_id}")
+        location = trip_json["metadata"].get("location", "")
+        days = total_days
+        attractions = []
         
-        # 更新行程JSON
-        trip_json["daily_itinerary"] = new_daily_itinerary
-        print(f"优化后的行程: {trip_json}")
+        # 为每个POI分配天数和顺序
+        for day_idx, day_pois in enumerate(clusters, 1):
+            if day_pois:
+                # 优化当天POI的访问顺序
+                optimized_pois = optimize_daily_route(day_pois)
+                
+                # 将优化后的POI添加到attractions列表
+                for order_idx, poi in enumerate(optimized_pois, 1):
+                    attraction = {
+                        "name": poi.get("name", ""),
+                        "day": day_idx,
+                        "order": order_idx,
+                        "transport": "",
+                        "type": "景点",
+                        "poi_id": poi.get("poi_id", ""),
+                        "latitude": poi.get("coordinates", [0, 0])[0] if isinstance(poi.get("coordinates"), list) else poi.get("latitude", 0),
+                        "longitude": poi.get("coordinates", [0, 0])[1] if isinstance(poi.get("coordinates"), list) else poi.get("longitude", 0),
+                        "address": poi.get("address", ""),
+                        "type_desc": poi.get("type_desc", "")
+                    }
+                    attractions.append(attraction)
+        
+        # 构建最终的行程数据
+        optimized_itinerary = {
+            "itinerary_id": itinerary_id,
+            "title": title,
+            "location": location,
+            "days": days,
+            "attractions": attractions
+        }
+        
         # 生成优化说明
         msg = "✅ 已完成行程优化：\n"
         msg += "1. 将地理位置相近的景点安排在同一天\n"
         msg += "2. 优化了每天景点的游览顺序，减少往返时间\n"
-        msg += "3. 严格保持了原有行程格式和所有景点属性"
+        msg += "3. 生成了包含确定POI顺序的完整行程数据"
+        
+        # 在消息中嵌入JSON数据
+        json_data = {
+            "data_type": "optimized_itinerary",
+            "itinerary": optimized_itinerary
+        }
+        response_with_json = msg + f"\n<!--JSON_DATA:{json.dumps(json_data, ensure_ascii=False)}-->"
         
     except Exception as e:
         print(f"优化过程中出现错误: {e}")
         msg = "❌ 优化行程时出现错误，请稍后重试。"
-        trip_json = None
+        optimized_itinerary = None
+        response_with_json = msg
     
     # 更新历史
-    history.append({"role": "assistant", "content": msg})
+    history.append({"role": "assistant", "content": response_with_json})
     
     return {
         **state,
-        "response": msg,
+        "response": response_with_json,
         "conversation_history": history,
         "flow_state": {
             **state["flow_state"],
             "on_progress": False,
-            "updated_trip": trip_json,  # 添加更新后的行程数据
-            "data_type": "trip"  # 标识返回数据类型为完整行程
-        }
+            "optimized_itinerary": optimized_itinerary,  # 添加优化后的行程数据
+            "data_type": "optimized_itinerary"  # 标识返回数据类型为优化后的行程
+        },
+        "data_type": "optimized_itinerary" if optimized_itinerary else None,
+        "data": optimized_itinerary if optimized_itinerary else None
     }
 
 def change_style_node(state: TripState) -> TripState:

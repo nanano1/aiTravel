@@ -67,6 +67,7 @@
 
         </activity>
         <activity android:name=".Activities.AIChatActivity" />
+        <activity android:name=".Activities.RestaurantDetailActivity" />
         <meta-data android:name="com.amap.api.v2.apikey" android:value="846737ab9642aa52e33440c0da81d044">
         </meta-data>
     </application>

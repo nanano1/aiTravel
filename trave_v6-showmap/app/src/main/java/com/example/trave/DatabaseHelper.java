@@ -120,13 +120,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(SQL_CREATE_TABLE_SITES);
         Log.d(TAG, "Database tables created");
     }
+
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 2) {
             // 添加新列
-            db.execSQL("ALTER TABLE " + TABLE_ATTRACTIONS + 
+            db.execSQL("ALTER TABLE " + TABLE_ATTRACTIONS +
                     " ADD COLUMN " + COLUMN_ATTRACTION_IS_AI_RECOMMENDED + " INTEGER DEFAULT 0");
-            db.execSQL("ALTER TABLE " + TABLE_ATTRACTIONS + 
+            db.execSQL("ALTER TABLE " + TABLE_ATTRACTIONS +
                     " ADD COLUMN " + COLUMN_ATTRACTION_AI_RECOMMEND_REASON + " TEXT");
         }
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_ITINERARIES);
@@ -184,6 +185,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.close();
         return siteId;
     }
+
     // 验证用户登录
     public boolean validateUser(String username, String password) {
         SQLiteDatabase db = this.getReadableDatabase();
@@ -239,7 +241,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // 通过行程单id获得行程单
-    public Itinerary getItineraryById(long itineraryId){
+    public Itinerary getItineraryById(long itineraryId) {
         SQLiteDatabase db = this.getReadableDatabase();
         String selection = COLUMN_ITINERARY_ID + "=?";
         String[] selectionArgs = {String.valueOf(itineraryId)};
@@ -264,14 +266,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             int status = cursor.getInt(cursor.getColumnIndex(COLUMN_ITINERARY_STATUS));
             long userId = cursor.getInt(cursor.getColumnIndex(COLUMN_ITINERARY_USER_ID));
 
-            Log.d("DatabaseHelper", "获取行程详情 - ID: " + itineraryId + 
-                  ", 标题: " + title + 
-                  ", 位置: " + location + 
-                  ", 天数: " + days + 
-                  ", 状态: " + status + 
-                  ", 用户ID: " + userId);
+            Log.d("DatabaseHelper", "获取行程详情 - ID: " + itineraryId +
+                    ", 标题: " + title +
+                    ", 位置: " + location +
+                    ", 天数: " + days +
+                    ", 状态: " + status +
+                    ", 用户ID: " + userId);
 
-            itinerary = new Itinerary(itineraryId, title, location, "pic"+pic, days, userId, status);
+            itinerary = new Itinerary(itineraryId, title, location, "pic" + pic, days, userId, status);
             cursor.close();
         } else {
             Log.e("DatabaseHelper", "未找到ID为 " + itineraryId + " 的行程");
@@ -279,6 +281,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         return itinerary;
     }
+
     // 删除特定行程单及其所有相关景点
     public boolean deleteItinerary(long itineraryId) {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -347,7 +350,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         try {
             db.beginTransaction();
-            
+
             // 获取site的type_desc并判断类型
             Sites site = getSiteBySiteId(attraction.getSiteId(), db);
             if (site != null) {
@@ -359,16 +362,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 attraction.setType("景点");
             }
 
-        ContentValues values = new ContentValues();
+            ContentValues values = new ContentValues();
             values.put(COLUMN_ITINERARY_SITE_ID, attraction.getSiteId());
             values.put(COLUMN_ATTRACTION_ITINERARY_ID, attraction.getItineraryId());
-        values.put(COLUMN_ATTRACTION_DAY_NUMBER, attraction.getDayNumber());
-        values.put(COLUMN_ATTRACTION_VISIT_ORDER, attraction.getVisitOrder());
-        values.put(COLUMN_ATTRACTION_NAME, attraction.getAttractionName());
-        values.put(COLUMN_ATTRACTION_TRANSPORT, attraction.getTransport());
+            values.put(COLUMN_ATTRACTION_DAY_NUMBER, attraction.getDayNumber());
+            values.put(COLUMN_ATTRACTION_VISIT_ORDER, attraction.getVisitOrder());
+            values.put(COLUMN_ATTRACTION_NAME, attraction.getAttractionName());
+            values.put(COLUMN_ATTRACTION_TRANSPORT, attraction.getTransport());
             values.put(COLUMN_ATTRACTION_TYPE, attraction.getType());
-            values.put(COLUMN_ATTRACTION_IS_AI_RECOMMENDED, attraction.isAiRecommended() ? 1 : 0);
-            values.put(COLUMN_ATTRACTION_AI_RECOMMEND_REASON, attraction.getAiRecommendReason());
 
             // 添加日志记录所有值
             Log.d(TAG, "添加景点 - " +
@@ -381,12 +382,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     "type: " + attraction.getType());
 
             id = db.insert(TABLE_ATTRACTIONS, null, values);
-            
+
             if (id == -1) {
                 Log.e(TAG, "插入景点失败");
             } else {
                 Log.d(TAG, "成功插入景点，ID: " + id);
-        attraction.setId(id);
+                attraction.setId(id);
                 db.setTransactionSuccessful();
             }
 
@@ -396,7 +397,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } finally {
             try {
                 db.endTransaction();
-        db.close();
+                db.close();
             } catch (Exception e) {
                 Log.e(TAG, "关闭数据库时出错: " + e.getMessage());
             }
@@ -426,9 +427,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.close();
         return itineraries;
     }
+
     // 获取用户数量
     public int getUserSize() {
-        int size=0;
+        int size = 0;
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(TABLE_USERS, null, null, null, null, null, null);
         if (cursor.moveToFirst()) {
@@ -448,7 +450,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         // 添加条件筛选，只查询status为true的行程单
         String selection = COLUMN_ITINERARY_STATUS + "=?";
-        String[] selectionArgs = { "1" };  // "1" 表示 true
+        String[] selectionArgs = {"1"};  // "1" 表示 true
 
         Cursor cursor = db.query(TABLE_ITINERARIES, null, selection, selectionArgs, null, null, null);
 
@@ -462,7 +464,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 int status = cursor.getInt(cursor.getColumnIndex(COLUMN_ITINERARY_STATUS));  // 获取发布状态
 
                 // 仅添加已发布（status = true）的行程单
-                if (status==1) {
+                if (status == 1) {
                     Itinerary itinerary = new Itinerary(id, title, location, "pic3", days, userId, status); // 更新构造函数
                     itineraries.add(itinerary);
                 }
@@ -531,12 +533,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
 
         try {
-        String selection = COLUMN_ATTRACTION_ITINERARY_ID + "=?";
-        String[] selectionArgs = {String.valueOf(itineraryId)};
-        Cursor cursor = db.query(TABLE_ATTRACTIONS, null, selection, selectionArgs, null, null, null);
+            String selection = COLUMN_ATTRACTION_ITINERARY_ID + "=?";
+            String[] selectionArgs = {String.valueOf(itineraryId)};
+            Cursor cursor = db.query(TABLE_ATTRACTIONS, null, selection, selectionArgs, null, null, null);
 
-        if (cursor != null && cursor.moveToFirst()) {
-            do {
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
                     // 获取列索引
                     int siteIdIndex = cursor.getColumnIndex(COLUMN_ITINERARY_SITE_ID);
                     int dayNumberIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_DAY_NUMBER);
@@ -544,14 +546,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     int nameIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_NAME);
                     int transportIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_TRANSPORT);
                     int typeIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_TYPE);
-                    
+
                     // AI推荐相关的列索引（可能不存在）
                     int isAiRecommendedIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_IS_AI_RECOMMENDED);
                     int aiRecommendReasonIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_AI_RECOMMEND_REASON);
 
                     // 检查列是否存在
-                    if (siteIdIndex == -1 || dayNumberIndex == -1 || visitOrderIndex == -1 || 
-                        nameIndex == -1 || transportIndex == -1) {
+                    if (siteIdIndex == -1 || dayNumberIndex == -1 || visitOrderIndex == -1 ||
+                            nameIndex == -1 || transportIndex == -1) {
                         Log.e(TAG, "某些必需的列不存在");
                         continue;
                     }
@@ -562,10 +564,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     int visitOrder = cursor.getInt(visitOrderIndex);
                     String name = cursor.getString(nameIndex);
                     String transport = cursor.getString(transportIndex);
-                    
+
                     // 创建ItineraryAttraction对象
                     ItineraryAttraction attraction = new ItineraryAttraction(itineraryId, siteId, dayNumber, visitOrder, name, transport);
-                    
+
                     // 设置类型（如果列存在）
                     if (typeIndex != -1) {
                         String type = cursor.getString(typeIndex);
@@ -579,7 +581,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         if (isAiRecommendedIndex != -1) {
                             attraction.setAiRecommended(cursor.getInt(isAiRecommendedIndex) == 1);
                         }
-                        
+
                         if (aiRecommendReasonIndex != -1) {
                             attraction.setAiRecommendReason(cursor.getString(aiRecommendReasonIndex));
                         }
@@ -590,19 +592,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         attraction.setAiRecommendReason("");
                     }
 
-                attractions.add(attraction);
-            } while (cursor.moveToNext());
-        }
+                    attractions.add(attraction);
+                } while (cursor.moveToNext());
+            }
 
-        if (cursor != null) {
-            cursor.close();
-        }
+            if (cursor != null) {
+                cursor.close();
+            }
         } catch (Exception e) {
             Log.e(TAG, "获取行程景点时出错: " + e.getMessage());
         } finally {
-        db.close();
+            db.close();
         }
-        
+
         return attractions;
     }
 
@@ -670,15 +672,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public boolean deleteAttractionByDayAndOrder(long itineraryId, int dayNumber, int visitOrder) {
         SQLiteDatabase db = this.getWritableDatabase();
-        String whereClause = COLUMN_ATTRACTION_ITINERARY_ID + "=? AND " + 
-                           COLUMN_ATTRACTION_DAY_NUMBER + "=? AND " + 
-                           COLUMN_ATTRACTION_VISIT_ORDER + "=?";
+        String whereClause = COLUMN_ATTRACTION_ITINERARY_ID + "=? AND " +
+                COLUMN_ATTRACTION_DAY_NUMBER + "=? AND " +
+                COLUMN_ATTRACTION_VISIT_ORDER + "=?";
         String[] whereArgs = {
-            String.valueOf(itineraryId),
-            String.valueOf(dayNumber),
-            String.valueOf(visitOrder)
+                String.valueOf(itineraryId),
+                String.valueOf(dayNumber),
+                String.valueOf(visitOrder)
         };
-        
+
         int rowsAffected = db.delete(TABLE_ATTRACTIONS, whereClause, whereArgs);
         db.close();
         return rowsAffected > 0;
@@ -688,15 +690,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try {
             SQLiteDatabase db = this.getWritableDatabase();
             ContentValues values = new ContentValues();
-            
+
             values.put(COLUMN_ATTRACTION_IS_AI_RECOMMENDED, isRecommended ? 1 : 0);
             values.put(COLUMN_ATTRACTION_AI_RECOMMEND_REASON, reason);
-            
+
             // 尝试更新数据
-            int result = db.update(TABLE_ATTRACTIONS, values, 
-                    COLUMN_ATTRACTION_ID + " = ?", 
+            int result = db.update(TABLE_ATTRACTIONS, values,
+                    COLUMN_ATTRACTION_ID + " = ?",
                     new String[]{String.valueOf(attractionId)});
-            
+
             db.close();
             return result > 0;
         } catch (Exception e) {
@@ -710,13 +712,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public boolean updateAttractionOrder(long attractionId, int dayNumber, int visitOrder) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
-        
+
         values.put(COLUMN_ATTRACTION_DAY_NUMBER, dayNumber);
         values.put(COLUMN_ATTRACTION_VISIT_ORDER, visitOrder);
-        
-        return db.update(TABLE_ATTRACTIONS, values, 
-                COLUMN_ATTRACTION_ID + " = ?", 
+
+        return db.update(TABLE_ATTRACTIONS, values,
+                COLUMN_ATTRACTION_ID + " = ?",
                 new String[]{String.valueOf(attractionId)}) > 0;
     }
-
 }
+

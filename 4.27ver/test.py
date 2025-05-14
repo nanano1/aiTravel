@@ -80,9 +80,24 @@ def get_surrounding_pois_baidu():
                 pois = result['results']
                 for poi in pois:
                     # 提取所需信息
+                    location=poi.get('location', '无纬度')
+                    latitude=location.get('lat')
+                    longitude=location.get('lng')
                     name = poi.get('name', '无名称')
-                    
+                    address=poi.get('address','无地址')
                     detail_info=poi.get('detail_info', '无详情')
+                    content_tag=detail_info.get('content_tag', '无内容标签')
+                    comment_num=detail_info.get('comment_num', '无评论数')
+                    discount_num=detail_info.get('discount_num', '无折扣数')
+                    favorite_num=detail_info.get('favorite_num', '无收藏数')
+                    print(f"地址: {address}")
+                    print(f"纬度: {latitude}")
+                    print(f"经度: {longitude}")
+                    print(f"内容标签: {content_tag}")
+                    print(f"评论数: {comment_num}")
+                    print(f"折扣数: {discount_num}")
+                    print(f"收藏数: {favorite_num}")
+                    print(detail_info)
                     overall_rating = detail_info.get('overall_rating', '无评分')
                     tag = detail_info.get('tag', '无标签')
                     label = detail_info.get('label', '无标签解释')
@@ -119,7 +134,7 @@ def search_restaurants_by_center_radius() -> list:
         "key": "d477f25785fee6455f468f4702ff7bd5",
         "location": '30.569248,114.309851',
         "radius": 4*1000,
-        "keywords": "景点",
+        "keywords": "美食",
         "types": "110000",
         "offset": 25,
         "page": 1,
@@ -325,11 +340,12 @@ def calculate_distance(origin_poi, destination_poi, type=1):
     }
 
 if __name__ == "__main__":
-    print(search_pois_by_center_view([30.569248,114.309851]))
-    print(calculate_distance([
-                  40.362639,
-                  116.024067
-                ],[
-                  39.9237932,
-                  116.4101746
-                ],))
+ #   print(search_pois_by_center_view([30.569248,114.309851]))
+ #   print(calculate_distance([
+ #                 40.362639,
+ ##                 116.024067
+ # #                ],[
+ # #                  39.9237932,
+ # #                  116.4101746
+ # #                ],))
+    get_surrounding_pois_baidu()

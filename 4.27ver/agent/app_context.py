@@ -37,7 +37,7 @@ class AppContext:
         self.llm = ChatOpenAI(
             api_key="sk-50653c0007284daa9a52bed1b99e537d",
             base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-            model="qwen2.5-14b-instruct-1m",
+            model="qwen2.5-7b-instruct-1m",
             temperature=0.3,
         )
         

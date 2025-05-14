@@ -74,8 +74,8 @@ getResInfo_prompt = PromptTemplate.from_template("""
     # 行程单概述
     "{itinerary_summary}"
     # 提取要求
-    ## 被替换POI信息target_restaurant
-    - 明确要替换的是c
+    ## 被替换POI信息target_restaurant,如果没有要被替换的POI,则res_info返回null
+    - 明确要替换的是哪一个餐厅
     - 准确识别要替换的具体名称（name）
     - 经纬度（coordinates）,经纬度一定要准确,根据行程单中每个poi对应的经纬度
     - 推荐菜品（recommended_food）
@@ -85,7 +85,10 @@ getResInfo_prompt = PromptTemplate.from_template("""
     - 提取前一个景点的名称和经纬度
     - 提取后一个景点的名称和经纬度
     - 提取要被替换的POI的前一个POI的名称和经纬度
-    - 提取要被替换的POI的后一个POI的名称和经纬度,当无下个景点时，自动将`next_poi`替换为酒店信息                                                                                  
+    - 提取要被替换的POI的后一个POI的名称和经纬度,当无下个景点时，自动将`next_poi`替换为酒店信息,如果酒店信息是默认酒店,那就next_poi返回和prev_poi一样的信息                                                                                  
+    ## day_info则是提取要被替换或者插入的POI所在的日期和顺序
+    - 提取要被替换或者插入的POI所在的日期
+    - 提取要被替换或者插入的POI在当天的顺序
     ## 输出格式要求
     # 输出格式要求,严格按以下格式输出,不要添加任何注释和解释
 ```
@@ -106,7 +109,11 @@ getResInfo_prompt = PromptTemplate.from_template("""
         "next_poi": {{
             "name": "钟山风景名胜区",
             "coordinates": [32.069291, 118.859406]
-        }}
+        }},
+        "day_info":{{
+            "day":1,
+            "order":2
+        }}                                         
     }}
 }}  
 """)
@@ -270,18 +277,37 @@ def search_restaurants_baidu(center: list, radius: float, preferences=None) -> l
             if result['status'] == 0:
                 pois = result['results']
                 for poi in pois:
+                    res_detail={}
                     # 提取所需信息
+                    location=poi.get('location', '无纬度')
+                    latitude=location.get('lat')
+                    longitude=location.get('lng')
+                    address=poi.get('address', '无地址')
+                    telephone=poi.get('telephone', '无电话')
                     uid = poi.get('uid', '无uid')
                     name = poi.get('name', '无名称')
                     detail_info=poi.get('detail_info', '无详情')
                     price = detail_info.get('price', '无价格')
                     classified_poi_tag=detail_info.get('classified_poi_tag', '无分类')
-                # 构建总结字符串
+                    overall_rating=detail_info.get('overall_rating', '无评分')
+                    comment_num=detail_info.get('comment_num', '无评论数')
+                    shop_hours=detail_info.get('shop_hours', '无营业时间')
+                    res_detail={
+                        "comment_num": comment_num,
+                        "price": price,
+                        "shop_hours": shop_hours,
+                    }
+                    # 构建总结字符串
                     results_list.append({
                         "uid": uid,
                         "name": name,
-                        "price": price,
-                        "label": classified_poi_tag
+                        "label": classified_poi_tag,
+                        "latitude": latitude,
+                        "longitude": longitude,
+                        "address": address,
+                        "telephone": telephone,
+                        "overall_rating": overall_rating,
+                        "res_detail": res_detail
                     })
             else:
                 print(f"请求失败，错误信息: {result['message']}")
@@ -291,6 +317,7 @@ def search_restaurants_baidu(center: list, radius: float, preferences=None) -> l
         print(f"请求发生异常: {e}")
     print(f"results_list:{results_list}")
     recommendations=rerocommend_byllm(results_list, preferences)
+    print("llm推荐结果recommendations:",recommendations)
     print("传入search_restaurants_baidu的偏好",preferences)
     return recommendations
 
@@ -407,7 +434,7 @@ def generate_res_recommendation(target_info: dict, preference_analysis=None):
     
     # 查询周边餐厅
     restaurants = search_restaurants_baidu(center, radius, preference_analysis) if preference_analysis else search_restaurants_baidu(center, radius)
-    
+    print("recommendRestaurant.py restaurants:",restaurants)
     if not restaurants:
         print("没有找到符合条件的餐厅")
         return "抱歉，在指定区域内没有找到符合条件的餐厅。"
@@ -422,7 +449,7 @@ def generate_res_recommendation(target_info: dict, preference_analysis=None):
 def rerocommend_byllm(candidate_pois: dict, preference_analysis: dict):
     pois_text = ""
     for poi in candidate_pois:
-        pois_text += f"{poi.get('uid')}. {poi.get('name')} - {poi.get('label', '无标签')} - 人均消费{poi.get('price', '未知')}元\n"
+        pois_text += f"{poi.get('uid')} - {poi.get('name')} - {poi.get('label', '无标签')} - 人均消费{poi.get('res_detail').get('price', '未知')}元\n"
 
     preference_text = f"用户提到的特殊偏好是{preference_analysis.get('special_requirement', '无偏好')}"
 
@@ -434,14 +461,12 @@ def rerocommend_byllm(candidate_pois: dict, preference_analysis: dict):
 
     候选餐厅列表：
     {pois_text}
-
-    要求输出以下JSON格式，不要添加其他文字：
+                                                   
+    要求推荐最符合的五个餐厅,并给出每个餐厅的推荐理由,输出以下JSON格式，不要添加其他文字：
     [
     {{
         "uid": "餐厅ID",
-        "name": "餐厅名称",
-        "price":77,
-        "label":"餐厅类型",                       
+        "name": "餐厅名称",                      
         "reason": "推荐理由"
     }},
     ...
@@ -455,7 +480,7 @@ def rerocommend_byllm(candidate_pois: dict, preference_analysis: dict):
 
     # 第三步：调用LLM
     llm_response = qwen_llm.predict(llm_input).strip()
-
+    print("llm_response:",llm_response)
     # 尝试解析JSON
     try:
         json_start = llm_response.find('[')
@@ -467,8 +492,19 @@ def rerocommend_byllm(candidate_pois: dict, preference_analysis: dict):
     except Exception as e:
         print(f"解析LLM推荐结果出错: {e}")
         recommendations = []
-    print("rerocommend_byllm:",recommendations)
-    return recommendations
+
+    # 根据推荐的uid生成详细信息的poi列表
+    detailed_pois = []
+    print("recommendations:",recommendations)
+    for recommendation in recommendations:
+        uid = recommendation.get('uid')
+        # 在candidate_pois中查找匹配的poi
+        matched_poi = next((poi for poi in candidate_pois if poi.get('uid') == uid), None)
+        if matched_poi:
+            # 将推荐理由添加到匹配的poi中
+            matched_poi['reason'] = recommendation.get('reason')
+            detailed_pois.append(matched_poi)
+    return detailed_pois
 
 """def main():
     first_trip = get_first_itinerary()

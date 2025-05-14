@@ -121,8 +121,7 @@ def process_message(message, itinerary_info: dict) -> str:
         # 处理景点详细信息
         attraction_data = {
             'name': attraction.get('name', ''),
-            'type': attraction.get('type', ''),
-            'poi_type': poi_type,  # 默认为景点类型
+            'poi_type': attraction.get('type', ''),  # 默认为景点类型
             'time': {
                 'start': '09:00',
                 'end': '10:30'

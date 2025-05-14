@@ -1,6 +1,7 @@
 package com.example.trave.Adapters;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,8 +10,10 @@ import android.widget.RatingBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.trave.Activities.RestaurantDetailActivity;
 import com.example.trave.Domains.RecommendedRestaurant;
 import com.example.trave.R;
 
@@ -20,10 +23,19 @@ public class RestaurantRecommendationAdapter extends RecyclerView.Adapter<Restau
     private List<RecommendedRestaurant> restaurants;
     private OnRecommendationClickListener listener;
     private Context context;
+    private long itineraryId;
+    private int dayNumber;
+    private String mealType;
 
     public RestaurantRecommendationAdapter(List<RecommendedRestaurant> restaurants, OnRecommendationClickListener listener) {
         this.restaurants = restaurants;
         this.listener = listener;
+    }
+    
+    public void setItineraryInfo(long itineraryId, int dayNumber, String mealType) {
+        this.itineraryId = itineraryId;
+        this.dayNumber = dayNumber;
+        this.mealType = mealType;
     }
 
     public interface OnRecommendationClickListener {
@@ -57,24 +69,26 @@ public class RestaurantRecommendationAdapter extends RecyclerView.Adapter<Restau
         holder.tvTitle.setText(restaurant.getName());
         holder.ratingBar.setRating((float) restaurant.getRating());
         
-        // 设置距离和价格信息
+        // 设置价格信息
         String priceInfo = String.format("人均: ¥%.0f", restaurant.getPriceLevel());
-        if (restaurant.getDistance() != null && !restaurant.getDistance().isEmpty()) {
-            holder.tvDistance.setText(String.format("%s · %s", restaurant.getDistance(), priceInfo));
-        } else {
-            holder.tvDistance.setText(priceInfo);
-        }
+        holder.tvDistance.setText(priceInfo);
         
-        // 设置推荐理由
+        // 设置推荐理由和菜系
         String reason = restaurant.getReason();
+        String cuisineType = restaurant.getCuisineType();
         if (reason != null && !reason.isEmpty()) {
-            // 如果有推荐理由，显示推荐理由和菜系
-            String cuisineType = restaurant.getCuisineType();
             holder.tvReason.setText(String.format("%s\n%s", cuisineType, reason));
         } else {
-            // 如果没有推荐理由，只显示菜系
-            holder.tvReason.setText(restaurant.getCuisineType());
+            holder.tvReason.setText(cuisineType);
         }
+        
+        // 设置整个卡片的点击事件
+        holder.cardView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openDetailActivity(restaurant);
+            }
+        });
         
         // 设置按钮点击事件
         holder.btnSelect.setOnClickListener(v -> {
@@ -94,6 +108,15 @@ public class RestaurantRecommendationAdapter extends RecyclerView.Adapter<Restau
                 listener.onRefreshClick();
             }
         });
+    }
+    
+    private void openDetailActivity(RecommendedRestaurant restaurant) {
+        Intent intent = new Intent(context, RestaurantDetailActivity.class);
+        intent.putExtra("restaurant_json", restaurant.getOriginalData().toString());
+        intent.putExtra("itinerary_id", itineraryId);
+        intent.putExtra("day_number", dayNumber);
+        intent.putExtra("meal_type", mealType);
+        context.startActivity(intent);
     }
 
     @Override
@@ -121,6 +144,7 @@ public class RestaurantRecommendationAdapter extends RecyclerView.Adapter<Restau
     }
 
     static class RecommendationViewHolder extends RecyclerView.ViewHolder {
+        CardView cardView;
         TextView tvTitle;
         RatingBar ratingBar;
         TextView tvDistance;
@@ -131,6 +155,7 @@ public class RestaurantRecommendationAdapter extends RecyclerView.Adapter<Restau
 
         RecommendationViewHolder(@NonNull View itemView) {
             super(itemView);
+            cardView = (CardView) itemView;
             tvTitle = itemView.findViewById(R.id.tvTitle);
             ratingBar = itemView.findViewById(R.id.ratingBar);
             tvDistance = itemView.findViewById(R.id.tvDistance);

@@ -37,7 +37,7 @@ def calculate_poi_change(existing_pois, current_days, target_days, max_per_day):
     diff = expected_total - len(existing_pois)
     return diff
 
-def search_pois_by_center(center_poi, radius=4, limit=10):
+def search_pois_by_center(center_poi, radius=4, limit=20):
     """
     根据中心POI坐标搜索周边景点
     
@@ -49,7 +49,7 @@ def search_pois_by_center(center_poi, radius=4, limit=10):
     Returns:
         list: 景点列表
     """
-    url = "https://restapi.amap.com/v3/place/around"
+    url = "https://restapi.amap.com/v5/place/around"
     
     # 将坐标格式转换为高德地图API需要的格式：经度,纬度
     location = f"{center_poi[1]},{center_poi[0]}"
@@ -78,7 +78,7 @@ def search_pois_by_center(center_poi, radius=4, limit=10):
                 
                 for poi in pois:
                     poi_type = poi.get('type', '无类型')
-                    biz_ext = poi.get('biz_ext', {})
+                    biz_ext = poi.get('business', {})
                     rating = biz_ext.get('rating', '无评分')
                     
                     # 提取经纬度
@@ -89,12 +89,15 @@ def search_pois_by_center(center_poi, radius=4, limit=10):
                         coordinates = [float(lat), float(lng)]
                     
                     poi_info = {
+                        "poi_id": poi.get('id'),
                         "name": poi.get('name'),
                         "type": poi_type,
                         "rating": rating,
                         "coordinates": coordinates,
                         "address": poi.get('address', '无地址'),
-                        "distance": poi.get('distance', '未知')
+                        "distance": poi.get('distance', '未知'),
+                        "tel": biz_ext.get('tel', '无电话'),
+                        "opentime_week": biz_ext.get('opentime_week', '无营业时间'),
                     }
                     
                     result_pois.append(poi_info)
@@ -649,7 +652,18 @@ def extract_intent_from_user_input(user_input: str, trip_json: dict, app_context
 
     # 调用 LLM 进行意图提取
     llm_response = app_context.llm.predict(intent_prompt.format(user_input=user_input, base_days=base_days, daily_pois=daily_pois)).strip()
-    print("llm_response",llm_response)
+    print("llm_response", llm_response)
+    
+    # 处理可能的Markdown格式JSON
+    import re
+    # 检查是否有Markdown代码块标记
+    if llm_response.startswith("```") and "```" in llm_response[3:]:
+        # 提取代码块内容
+        pattern = r"```(?:json)?\s*([\s\S]*?)\s*```"
+        match = re.search(pattern, llm_response)
+        if match:
+            llm_response = match.group(1).strip()
+    
     # 解析 LLM 返回的 JSON
     try:
         extracted_info = json.loads(llm_response)
@@ -667,7 +681,7 @@ def extract_intent_from_user_input(user_input: str, trip_json: dict, app_context
 
     # 打印提取的结果
     print("提取的意图:", extracted_info)
-    return extracted_info 
+    return extracted_info
 
 def generate_recommendation_reason(poi_intro, score_details, prefer_tags, llm_client=None, is_removal=False):
     """

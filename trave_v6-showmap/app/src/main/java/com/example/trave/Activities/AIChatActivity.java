@@ -23,6 +23,7 @@ import com.example.trave.Domains.RecommendedPOI;
 import com.example.trave.Domains.RecommendedRestaurant;
 import com.example.trave.R;
 import com.example.trave.Services.AIService;
+import com.example.trave.Services.RestaurantRecommendService;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -36,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 
 public class AIChatActivity extends AppCompatActivity implements 
         RestaurantRecommendationAdapter.OnRecommendationClickListener,
@@ -336,12 +338,89 @@ public class AIChatActivity extends AppCompatActivity implements
             items.add(new RecommendedPOI(rec));
         }
 
-        // 确保使用POI推荐适配器
-        recommendationsRecyclerView.setAdapter(poiRecommendationsAdapter);
-        recommendationsRecyclerView.setVisibility(View.VISIBLE);
-        poiRecommendationsAdapter.updateRecommendations(items);
+        // 使用新的POI推荐对话框替代列表显示
+        POIRecommendationDialog dialog = new POIRecommendationDialog(this, items, new POIRecommendationDialog.POIRecommendationListener() {
+            @Override
+            public void onPOIsSelected(List<RecommendedPOI> selectedPOIs) {
+                // 处理用户选择的多个POI
+                processPOISelections(selectedPOIs);
+            }
+
+            @Override
+            public void onRefreshRequest() {
+                // 处理"换一批"请求
+                String refreshMessage = "请告诉我您的更多偏好，例如：\n"
+                        + "- 想去更文艺的地方\n"
+                        + "- 有适合小孩子的景点吗\n"
+                        + "- 想去人少一点的地方\n"
+                        + "- 想找评分高于4.5的景点\n\n"
+                        + "这样我可以为您提供更符合需求的推荐。";
+                addMessage(refreshMessage, false);
+            }
+        });
+
+        dialog.show();
         
-        Log.d(TAG, "已更新POI推荐，数量: " + items.size());
+        Log.d(TAG, "已显示POI推荐对话框，数量: " + items.size());
+    }
+
+    // 添加处理多个POI选择的新方法
+    private void processPOISelections(List<RecommendedPOI> selectedPOIs) {
+        if (selectedPOIs == null || selectedPOIs.isEmpty()) {
+            Log.w(TAG, "未选择任何POI");
+            return;
+        }
+        
+        executorService.execute(() -> {
+            boolean allSuccess = true;
+            StringBuilder resultMessage = new StringBuilder("已添加以下景点到您的行程：\n");
+            
+            for (RecommendedPOI poi : selectedPOIs) {
+                try {
+                    // 获取POI的原始JSON数据
+                    JSONObject poiData = poi.getOriginalData();
+                    if (poiData != null) {
+                        // 确保有day和order字段
+                        int day = poiData.optInt("day", 1);
+                        int order = poiData.optInt("order", 1);
+                        Log.d(TAG, "处理POI - " + poi.getName() + ", day: " + day + ", order: " + order);
+                        
+                        // 更新到行程中
+                        boolean success = aiService.updateItineraryWithPOIRecommendation(
+                            itineraryId, 
+                            poiData,
+                            dbHelper
+                        );
+                        
+                        if (success) {
+                            resultMessage.append("• ").append(poi.getName()).append("\n");
+                        } else {
+                            allSuccess = false;
+                            Log.e(TAG, "添加POI失败: " + poi.getName());
+                        }
+                    }
+                } catch (Exception e) {
+                    allSuccess = false;
+                    Log.e(TAG, "处理POI选择时出错: " + e.getMessage(), e);
+                }
+            }
+            
+            final boolean finalSuccess = allSuccess;
+            mainHandler.post(() -> {
+                // 重新加载行程数据
+                loadItineraryData();
+                
+                // 显示结果消息
+                if (finalSuccess) {
+                    addMessage(resultMessage.toString(), false);
+                } else {
+                    addMessage("部分景点添加失败，请重试。", false);
+                }
+                
+                // 向AI发送确认消息
+                sendMessage("我已选择了" + selectedPOIs.size() + "个景点");
+            });
+        });
     }
 
     private void handleItineraryUpdate(JSONObject data) {
@@ -355,11 +434,16 @@ public class AIChatActivity extends AppCompatActivity implements
                 // 保存原始行程内容
                 String originalName = "";
                 
-                // 根据日子和序号获取被替换的景点名称
+                // 获取日期和顺序
+                int day = 0;
+                int order = 0;
+                
+                // 从restaurant对象的原始数据中获取day和order
                 if (restaurant.getOriginalData() != null) {
-                    int day = restaurant.getOriginalData().optInt("day", 0);
-                    int order = restaurant.getOriginalData().optInt("order", 0);
+                    day = restaurant.getOriginalData().optInt("day", 0);
+                    order = restaurant.getOriginalData().optInt("order", 0);
                     
+                    // 根据日子和序号获取被替换的景点名称
                     for (ItineraryAttraction attraction : itineraryAttractions) {
                         if (attraction.getDayNumber() == day && attraction.getVisitOrder() == order) {
                             originalName = attraction.getAttractionName();
@@ -368,69 +452,81 @@ public class AIChatActivity extends AppCompatActivity implements
                     }
                 }
                 
-                boolean success = aiService.updateItineraryWithRecommendation(
+                // 使用RestaurantRecommendService确认选择
+                RestaurantRecommendService service = new RestaurantRecommendService();
+                boolean success = service.confirmRestaurantSelection(
+                    restaurant, 
                     itineraryId, 
-                    restaurant.getOriginalData(),
+                    day, 
+                    order, 
                     dbHelper
                 );
 
                 final String finalOriginalName = originalName;
-                
                 mainHandler.post(() -> {
                     if (success) {
+                        // 添加成功消息
+                        String successMessage;
+                        if (!finalOriginalName.isEmpty()) {
+                            successMessage = String.format("已成功替换",
+                                    finalOriginalName, restaurant.getName());
+                        } else {
+                            successMessage = String.format("已添加成功到您的行程 ✓",
+                                    restaurant.getName());
+                        }
+                        addMessage(successMessage, false);
+                        
+                        // 隐藏推荐列表
+                        recommendationsRecyclerView.setVisibility(View.GONE);
+                        
                         // 重新加载行程数据
                         loadItineraryData();
                         
-                        // 添加一条AI消息，确认修改
-                        String aiMessage = String.format(
-                            "已将 Day %d 的「%s」修改为「%s」",
-                            restaurant.getOriginalData().optInt("day", 0),
-                            finalOriginalName.isEmpty() ? "原项目" : finalOriginalName,
-                            restaurant.getName()
-                        );
-                        addMessage(aiMessage, false);
-                        
-                        // 保存推荐理由到数据库
-                        executorService.execute(() -> {
-                            try {
-                                // 延迟一下等待数据库刷新
-                                Thread.sleep(500);
-                                
-                                // 获取新添加的餐厅景点ID
-                                ArrayList<ItineraryAttraction> updatedAttractions = 
-                                    dbHelper.getItineraryAttractions(itineraryId);
-                                
-                                for (ItineraryAttraction attraction : updatedAttractions) {
-                                    if (attraction.getAttractionName().equals(restaurant.getName())) {
-                                        // 更新为AI推荐并添加推荐理由
-                                        dbHelper.updateAttractionAiRecommended(
-                                            attraction.getId(), 
-                                            true, 
-                                            restaurant.getReason()
-                                        );
-                                        
-                                        // 通知适配器更新UI
-                                        mainHandler.post(() -> {
-                                            itineraryDetailAdapter.markAsAiRecommended(attraction.getId());
-                                        });
-                                        
-                                        break;
-                                    }
-                                }
-                            } catch (Exception e) {
-                                Log.e(TAG, "保存AI推荐记录失败", e);
-                            }
-                        });
-                        
-                        recommendationsRecyclerView.setVisibility(View.GONE);
+                        // 标记有变更
+                        hasChanges = true;
                     } else {
-                        Toast.makeText(this, "更新行程失败", Toast.LENGTH_SHORT).show();
+                        // 添加失败消息
+                        addMessage("无法更新行程，请重试。", false);
                     }
                 });
+                
+                executorService.execute(() -> {
+                    try {
+                        // 延迟一下等待数据库刷新
+                        Thread.sleep(500);
+                        
+                        // 获取新添加的餐厅景点ID
+                        ArrayList<ItineraryAttraction> updatedAttractions = 
+                            dbHelper.getItineraryAttractions(itineraryId);
+                        
+                        for (ItineraryAttraction attraction : updatedAttractions) {
+                            if (attraction.getAttractionName().equals(restaurant.getName())) {
+                                // 更新为AI推荐并添加推荐理由
+                                dbHelper.updateAttractionAiRecommended(
+                                    attraction.getId(), 
+                                    true, 
+                                    restaurant.getReason()
+                                );
+                                
+                                // 通知适配器更新UI
+                                mainHandler.post(() -> {
+                                    itineraryDetailAdapter.markAsAiRecommended(attraction.getId());
+                                });
+                                
+                                break;
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "保存AI推荐记录失败", e);
+                    }
+                });
+                
+                recommendationsRecyclerView.setVisibility(View.GONE);
             } catch (Exception e) {
-                mainHandler.post(() -> 
-                    Toast.makeText(this, "更新行程失败: " + e.getMessage(), Toast.LENGTH_SHORT).show()
-                );
+                mainHandler.post(() -> {
+                    // 添加错误消息
+                    addMessage("更新行程时出错: " + e.getMessage(), false);
+                });
             }
         });
     }
@@ -453,6 +549,7 @@ public class AIChatActivity extends AppCompatActivity implements
                     + "- 您想去的景点评分\n\n"
                     + "这样我可以为您提供更符合需求的推荐。";
             addMessage(refreshMessage, false);
+            recommendationsRecyclerView.setVisibility(View.GONE);
         } else if (currentAdapter instanceof POIRecommendationAdapter) {
             // 对于POI推荐，直接显示提示消息，不调用后端
             String refreshMessage = "请告诉我您的更多偏好，例如：\n"
@@ -490,13 +587,8 @@ public class AIChatActivity extends AppCompatActivity implements
     @Override
     public void onItemClick(ItineraryAttraction attraction) {
         // 处理行程项目点击
-        if (attraction.isAiRecommended()) {
-            // 显示AI推荐理由
-            String reasonMessage = String.format(
-                "「%s」是AI推荐的餐厅，推荐理由：\n\n%s",
-                attraction.getAttractionName(),
-                attraction.getAiRecommendReason()
-            );
+        {
+            String reasonMessage = attraction.getType();
             addMessage(reasonMessage, false);
         }
     }
