@@ -7,6 +7,7 @@ import com.example.trave.Domains.Itinerary;
 import com.example.trave.Domains.ItineraryAttraction;
 import com.example.trave.Domains.Sites;
 import com.example.trave.Domains.RecommendedRestaurant;
+import com.example.trave.Domains.RecommendedPOI;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -233,5 +234,108 @@ public class AIService {
             Log.e(TAG, "解析餐厅推荐数据失败: " + e.getMessage());
         }
         return recommendations;
+    }
+
+    public List<RecommendedPOI> getPOIRecommendations() {
+        if (structuredData == null || !hasStructuredDataOfType("poi_recommendations")) {
+            return new ArrayList<>();
+        }
+
+        List<RecommendedPOI> recommendations = new ArrayList<>();
+        try {
+            JSONArray recommendationsArray = structuredData.getJSONArray("recommendations");
+            for (int i = 0; i < recommendationsArray.length(); i++) {
+                JSONObject poiJson = recommendationsArray.getJSONObject(i);
+                // 确保每个POI都有day和order字段
+                if (!poiJson.has("day")) {
+                    poiJson.put("day", 1);
+                }
+                if (!poiJson.has("order")) {
+                    poiJson.put("order", i + 1);
+                }
+                recommendations.add(new RecommendedPOI(poiJson));
+            }
+            Log.d(TAG, "成功解析" + recommendations.size() + "个POI推荐");
+        } catch (JSONException e) {
+            Log.e(TAG, "解析POI推荐数据失败: " + e.getMessage());
+        }
+        return recommendations;
+    }
+    
+    // 处理POI推荐的更新
+    public boolean updateItineraryWithPOIRecommendation(long itineraryId, JSONObject recommendationData, DatabaseHelper dbHelper) {
+        try {
+            // 获取要替换的景点信息
+            int targetDay = recommendationData.getInt("day");
+            int targetOrder = recommendationData.getInt("order");
+            
+            // 获取新景点信息
+            String name = recommendationData.getString("name");
+            double latitude = 0;
+            double longitude = 0;
+            
+            // 获取坐标
+            if (recommendationData.has("coordinates")) {
+                JSONArray coords = recommendationData.getJSONArray("coordinates");
+                if (coords.length() >= 2) {
+                    latitude = coords.getDouble(0);
+                    longitude = coords.getDouble(1);
+                }
+            }
+            
+            // 获取其他信息，如果不存在则使用默认值
+            String address = recommendationData.optString("address", "未知地址");
+            String typeDesc = recommendationData.optString("type", "景点");
+            
+            // 以下字段在高德API中可能存在，但在当前数据中可能不存在，使用默认值
+            String businessArea = recommendationData.optString("business_area", "");
+            String tel = recommendationData.optString("tel", "");
+            String website = recommendationData.optString("website", "");
+            String photos = recommendationData.optString("photos", "");
+            
+            // 打印调试信息
+            Log.d(TAG, "更新行程景点 - " +
+                  "名称: " + name + ", " +
+                  "坐标: [" + latitude + ", " + longitude + "], " +
+                  "地址: " + address + ", " +
+                  "类型: " + typeDesc);
+            
+            // 添加或获取景点
+            // 使用name作为poiId，因为POI可能没有明确的ID
+            long siteId = dbHelper.addOrGetSite(name, name, latitude, longitude, address,
+                    businessArea, tel, website, typeDesc, photos);
+            
+            if (siteId <= 0) {
+                Log.e(TAG, "添加景点失败: " + name);
+                return false;
+            }
+            
+            // 创建新的ItineraryAttraction对象
+            ItineraryAttraction newAttraction = new ItineraryAttraction(
+                    itineraryId, siteId, targetDay, targetOrder, name, "步行");
+            newAttraction.setType("景点");  // 设置类型为景点
+            
+            // 如果有推荐理由，设置为AI推荐
+            if (recommendationData.has("recommendation_reason")) {
+                String reason = recommendationData.getString("recommendation_reason");
+                newAttraction.setAiRecommended(true);
+                newAttraction.setAiRecommendReason(reason);
+            }
+            
+            // 更新数据库
+            // 首先删除原有的景点
+            boolean deleteResult = dbHelper.deleteAttractionByDayAndOrder(itineraryId, targetDay, targetOrder);
+            Log.d(TAG, "删除原景点结果: " + deleteResult);
+            
+            // 添加新的景点
+            long newAttractionId = dbHelper.addAttraction(newAttraction);
+            Log.d(TAG, "添加新景点结果: " + (newAttractionId > 0 ? "成功" : "失败"));
+            
+            return newAttractionId > 0;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "更新行程景点失败: " + e.getMessage(), e);
+            return false;
+        }
     }
 }

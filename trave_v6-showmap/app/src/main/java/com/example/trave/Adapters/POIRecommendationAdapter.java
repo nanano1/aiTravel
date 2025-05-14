@@ -11,33 +11,33 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.trave.Domains.RecommendedRestaurant;
+import com.example.trave.Domains.RecommendedPOI;
 import com.example.trave.R;
 
 import java.util.List;
 
-public class RestaurantRecommendationAdapter extends RecyclerView.Adapter<RestaurantRecommendationAdapter.RecommendationViewHolder> {
-    private List<RecommendedRestaurant> restaurants;
+public class POIRecommendationAdapter extends RecyclerView.Adapter<POIRecommendationAdapter.RecommendationViewHolder> {
+    private List<RecommendedPOI> pois;
     private OnRecommendationClickListener listener;
     private Context context;
 
-    public RestaurantRecommendationAdapter(List<RecommendedRestaurant> restaurants, OnRecommendationClickListener listener) {
-        this.restaurants = restaurants;
+    public POIRecommendationAdapter(List<RecommendedPOI> pois, OnRecommendationClickListener listener) {
+        this.pois = pois;
         this.listener = listener;
     }
 
     public interface OnRecommendationClickListener {
-        void onSelectClick(RecommendedRestaurant restaurant);
+        void onSelectClick(RecommendedPOI poi);
         void onRefreshClick();
-        void onDetailsClick(RecommendedRestaurant restaurant);
+        void onDetailsClick(RecommendedPOI poi);
     }
 
     public void setOnRecommendationClickListener(OnRecommendationClickListener listener) {
         this.listener = listener;
     }
 
-    public void updateRecommendations(List<RecommendedRestaurant> newRestaurants) {
-        this.restaurants = newRestaurants;
+    public void updateRecommendations(List<RecommendedPOI> newPOIs) {
+        this.pois = newPOIs;
         notifyDataSetChanged();
     }
 
@@ -51,41 +51,46 @@ public class RestaurantRecommendationAdapter extends RecyclerView.Adapter<Restau
 
     @Override
     public void onBindViewHolder(@NonNull RecommendationViewHolder holder, int position) {
-        RecommendedRestaurant restaurant = restaurants.get(position);
+        RecommendedPOI poi = pois.get(position);
         
-        // 设置餐厅信息
-        holder.tvTitle.setText(restaurant.getName());
-        holder.ratingBar.setRating((float) restaurant.getRating());
+        // 设置景点信息
+        holder.tvTitle.setText(poi.getName());
+        holder.ratingBar.setRating((float) poi.getRating());
         
-        // 设置距离和价格信息
-        String priceInfo = String.format("人均: ¥%.0f", restaurant.getPriceLevel());
-        if (restaurant.getDistance() != null && !restaurant.getDistance().isEmpty()) {
-            holder.tvDistance.setText(String.format("%s · %s", restaurant.getDistance(), priceInfo));
-        } else {
-            holder.tvDistance.setText(priceInfo);
+        // 设置距离信息
+        String distanceInfo = "";
+        if (poi.getDistance() != null && !poi.getDistance().isEmpty()) {
+            distanceInfo = String.format("距离: %s", poi.getDistance());
+        }
+        
+        // 设置类型信息
+        String typeInfo = poi.getSimpleType();
+        if (!distanceInfo.isEmpty() && !typeInfo.isEmpty()) {
+            holder.tvDistance.setText(String.format("%s · %s", distanceInfo, typeInfo));
+        } else if (!distanceInfo.isEmpty()) {
+            holder.tvDistance.setText(distanceInfo);
+        } else if (!typeInfo.isEmpty()) {
+            holder.tvDistance.setText(typeInfo);
         }
         
         // 设置推荐理由
-        String reason = restaurant.getReason();
+        String reason = poi.getRecommendationReason();
         if (reason != null && !reason.isEmpty()) {
-            // 如果有推荐理由，显示推荐理由和菜系
-            String cuisineType = restaurant.getCuisineType();
-            holder.tvReason.setText(String.format("%s\n%s", cuisineType, reason));
+            holder.tvReason.setText(reason);
         } else {
-            // 如果没有推荐理由，只显示菜系
-            holder.tvReason.setText(restaurant.getCuisineType());
+            holder.tvReason.setText(poi.getSimpleType());
         }
         
         // 设置按钮点击事件
         holder.btnSelect.setOnClickListener(v -> {
             if (listener != null) {
-                listener.onSelectClick(restaurant);
+                listener.onSelectClick(poi);
             }
         });
         
         holder.btnDetails.setOnClickListener(v -> {
             if (listener != null) {
-                listener.onDetailsClick(restaurant);
+                listener.onDetailsClick(poi);
             }
         });
         
@@ -98,26 +103,7 @@ public class RestaurantRecommendationAdapter extends RecyclerView.Adapter<Restau
 
     @Override
     public int getItemCount() {
-        return restaurants != null ? restaurants.size() : 0;
-    }
-
-    /**
-     * 根据价格级别返回价格标识
-     */
-    private String getPriceLevelString(double priceLevel) {
-        int level = (int) Math.round(priceLevel);
-        switch (level) {
-            case 1:
-                return "¥";
-            case 2:
-                return "¥¥";
-            case 3:
-                return "¥¥¥";
-            case 4:
-                return "¥¥¥¥";
-            default:
-                return "¥";
-        }
+        return pois != null ? pois.size() : 0;
     }
 
     static class RecommendationViewHolder extends RecyclerView.ViewHolder {

@@ -56,6 +56,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_ATTRACTION_NAME = "name";
     private static final String COLUMN_ATTRACTION_TRANSPORT = "transport";
     private static final String COLUMN_ATTRACTION_TYPE = "type";
+    private static final String COLUMN_ATTRACTION_IS_AI_RECOMMENDED = "is_ai_recommended";
+    private static final String COLUMN_ATTRACTION_AI_RECOMMEND_REASON = "ai_recommend_reason";
 
     private static final String TABLE_USERS = "users";
     private static final String COLUMN_USER_ID = "id";
@@ -98,6 +100,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             COLUMN_ATTRACTION_NAME + " TEXT," +
             COLUMN_ATTRACTION_TRANSPORT + " TEXT," +
             COLUMN_ATTRACTION_TYPE + " TEXT," +  // 新增type字段
+            COLUMN_ATTRACTION_IS_AI_RECOMMENDED + " INTEGER DEFAULT 0," +
+            COLUMN_ATTRACTION_AI_RECOMMEND_REASON + " TEXT," +
             "FOREIGN KEY (" + COLUMN_ATTRACTION_ITINERARY_ID + ") REFERENCES " +
             TABLE_ITINERARIES + "(" + COLUMN_ITINERARY_ID + ")," +
             "FOREIGN KEY (" + COLUMN_ITINERARY_SITE_ID + ") REFERENCES " +
@@ -118,6 +122,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        if (oldVersion < 2) {
+            // 添加新列
+            db.execSQL("ALTER TABLE " + TABLE_ATTRACTIONS + 
+                    " ADD COLUMN " + COLUMN_ATTRACTION_IS_AI_RECOMMENDED + " INTEGER DEFAULT 0");
+            db.execSQL("ALTER TABLE " + TABLE_ATTRACTIONS + 
+                    " ADD COLUMN " + COLUMN_ATTRACTION_AI_RECOMMEND_REASON + " TEXT");
+        }
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_ITINERARIES);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_ATTRACTIONS);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
@@ -356,6 +367,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_ATTRACTION_NAME, attraction.getAttractionName());
         values.put(COLUMN_ATTRACTION_TRANSPORT, attraction.getTransport());
             values.put(COLUMN_ATTRACTION_TYPE, attraction.getType());
+            values.put(COLUMN_ATTRACTION_IS_AI_RECOMMENDED, attraction.isAiRecommended() ? 1 : 0);
+            values.put(COLUMN_ATTRACTION_AI_RECOMMEND_REASON, attraction.getAiRecommendReason());
 
             // 添加日志记录所有值
             Log.d(TAG, "添加景点 - " +
@@ -531,6 +544,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     int nameIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_NAME);
                     int transportIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_TRANSPORT);
                     int typeIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_TYPE);
+                    
+                    // AI推荐相关的列索引（可能不存在）
+                    int isAiRecommendedIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_IS_AI_RECOMMENDED);
+                    int aiRecommendReasonIndex = cursor.getColumnIndex(COLUMN_ATTRACTION_AI_RECOMMEND_REASON);
 
                     // 检查列是否存在
                     if (siteIdIndex == -1 || dayNumberIndex == -1 || visitOrderIndex == -1 || 
@@ -555,6 +572,22 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         attraction.setType(type != null ? type : "景点");
                     } else {
                         attraction.setType("景点");
+                    }
+
+                    // 设置AI推荐相关字段（如果列存在）
+                    try {
+                        if (isAiRecommendedIndex != -1) {
+                            attraction.setAiRecommended(cursor.getInt(isAiRecommendedIndex) == 1);
+                        }
+                        
+                        if (aiRecommendReasonIndex != -1) {
+                            attraction.setAiRecommendReason(cursor.getString(aiRecommendReasonIndex));
+                        }
+                    } catch (Exception e) {
+                        // 如果AI推荐相关列读取失败，设置默认值
+                        Log.w(TAG, "读取AI推荐信息失败，使用默认值: " + e.getMessage());
+                        attraction.setAiRecommended(false);
+                        attraction.setAiRecommendReason("");
                     }
 
                 attractions.add(attraction);
@@ -649,6 +682,41 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         int rowsAffected = db.delete(TABLE_ATTRACTIONS, whereClause, whereArgs);
         db.close();
         return rowsAffected > 0;
+    }
+
+    public boolean updateAttractionAiRecommended(long attractionId, boolean isRecommended, String reason) {
+        try {
+            SQLiteDatabase db = this.getWritableDatabase();
+            ContentValues values = new ContentValues();
+            
+            values.put(COLUMN_ATTRACTION_IS_AI_RECOMMENDED, isRecommended ? 1 : 0);
+            values.put(COLUMN_ATTRACTION_AI_RECOMMEND_REASON, reason);
+            
+            // 尝试更新数据
+            int result = db.update(TABLE_ATTRACTIONS, values, 
+                    COLUMN_ATTRACTION_ID + " = ?", 
+                    new String[]{String.valueOf(attractionId)});
+            
+            db.close();
+            return result > 0;
+        } catch (Exception e) {
+            // 如果列不存在，记录日志但不影响程序正常运行
+            Log.w(TAG, "更新AI推荐信息失败（可能是列不存在）: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // 更新景点的访问顺序
+    public boolean updateAttractionOrder(long attractionId, int dayNumber, int visitOrder) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        
+        values.put(COLUMN_ATTRACTION_DAY_NUMBER, dayNumber);
+        values.put(COLUMN_ATTRACTION_VISIT_ORDER, visitOrder);
+        
+        return db.update(TABLE_ATTRACTIONS, values, 
+                COLUMN_ATTRACTION_ID + " = ?", 
+                new String[]{String.valueOf(attractionId)}) > 0;
     }
 
 }

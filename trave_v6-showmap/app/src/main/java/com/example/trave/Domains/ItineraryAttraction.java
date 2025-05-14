@@ -12,6 +12,8 @@ public class ItineraryAttraction implements Parcelable {
     private String attractionName;
     private String transport;
     private String type;
+    private boolean isAiRecommended;
+    private String aiRecommendReason;
 
     public ItineraryAttraction(long itineraryId, long siteId, int dayNumber, int visitOrder, String attractionName, String transport, String type) {
         this.itineraryId = itineraryId;
@@ -21,6 +23,8 @@ public class ItineraryAttraction implements Parcelable {
         this.attractionName = attractionName;
         this.transport = transport;
         this.type = type;
+        this.isAiRecommended = false;
+        this.aiRecommendReason = "";
     }
 
     public ItineraryAttraction(long itineraryId, long siteId, int dayNumber, int visitOrder, String attractionName, String transport) {
@@ -31,6 +35,8 @@ public class ItineraryAttraction implements Parcelable {
         this.attractionName = attractionName;
         this.transport = transport;
         this.type = "景点";
+        this.isAiRecommended = false;
+        this.aiRecommendReason = "";
     }
 
     public ItineraryAttraction(int dayNumber, int visitOrder, String attractionName, String transport) {
@@ -39,6 +45,8 @@ public class ItineraryAttraction implements Parcelable {
         this.attractionName = attractionName;
         this.transport = transport;
         this.type = "景点";
+        this.isAiRecommended = false;
+        this.aiRecommendReason = "";
     }
 
     public ItineraryAttraction(long siteId, int dayNumber, int visitOrder, String attractionName, String transport) {
@@ -48,6 +56,8 @@ public class ItineraryAttraction implements Parcelable {
         this.attractionName = attractionName;
         this.transport = transport;
         this.type = "景点";
+        this.isAiRecommended = false;
+        this.aiRecommendReason = "";
     }
 
     public long getSiteId() {
@@ -67,6 +77,8 @@ public class ItineraryAttraction implements Parcelable {
         attractionName = in.readString();
         transport = in.readString();
         type = in.readString();
+        isAiRecommended = in.readInt() == 1;
+        aiRecommendReason = in.readString();
     }
 
     public static final Creator<ItineraryAttraction> CREATOR = new Creator<ItineraryAttraction>() {
@@ -117,6 +129,22 @@ public class ItineraryAttraction implements Parcelable {
         this.type = type;
     }
 
+    public boolean isAiRecommended() {
+        return isAiRecommended;
+    }
+
+    public void setAiRecommended(boolean aiRecommended) {
+        isAiRecommended = aiRecommended;
+    }
+
+    public String getAiRecommendReason() {
+        return aiRecommendReason;
+    }
+
+    public void setAiRecommendReason(String aiRecommendReason) {
+        this.aiRecommendReason = aiRecommendReason;
+    }
+
     public void setItineraryId(long itineraryId) {
         this.itineraryId = itineraryId;
     }
@@ -152,5 +180,7 @@ public class ItineraryAttraction implements Parcelable {
         dest.writeString(attractionName);
         dest.writeString(transport);
         dest.writeString(type);
+        dest.writeInt(isAiRecommended ? 1 : 0);
+        dest.writeString(aiRecommendReason);
     }
 }

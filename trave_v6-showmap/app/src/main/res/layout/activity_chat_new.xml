@@ -73,15 +73,33 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="行程单"
-                android:textSize="18sp"
-                android:textStyle="bold"
+                android:orientation="horizontal"
                 android:background="@color/orange"
-                android:textColor="@color/white"/>
+                android:padding="8dp">
+                
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="8dp"
+                    android:text="行程单"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"/>
+                    
+                <Button
+                    android:id="@+id/editButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="编辑行程"
+                    android:textSize="12sp"
+                    android:background="@drawable/bg_rounded_white"
+                    android:textColor="@color/orange"
+                    android:padding="4dp"/>
+            </LinearLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/itineraryRecyclerView"

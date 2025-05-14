@@ -58,6 +58,7 @@ def chat():
                 'data': response.get('data'),
                 'data_type': response.get('data_type')
             })
+            
         else:
             # 处理旧格式（字符串）响应
             logger.info(f"AI 响应: {response[:100]}...")
