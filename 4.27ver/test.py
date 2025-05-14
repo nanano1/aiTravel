@@ -1,5 +1,5 @@
 import requests
-
+import os
 def get_all_pois_baidu():
 
     ak = 'UIOBPAhprxZdUqc2lufTIKy7nYMNh3mv'
@@ -131,7 +131,7 @@ def search_restaurants_by_center_radius() -> list:
     url = "https://restapi.amap.com/v3/place/around"
     
     params = {
-        "key": "d477f25785fee6455f468f4702ff7bd5",
+        "key": os.getenv('AMAP_KEY'),
         "location": '30.569248,114.309851',
         "radius": 4*1000,
         "keywords": "美食",

@@ -7,7 +7,7 @@ from math import radians, sin, cos, sqrt, atan2, degrees
 import requests
 
 qwen_llm=ChatOpenAI(
-            api_key="sk-50653c0007284daa9a52bed1b99e537d",
+            api_key="sk-",
             base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
             model="qwen2.5-14b-instruct-1m",
             temperature=0.3,

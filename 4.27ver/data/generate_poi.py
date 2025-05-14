@@ -9,7 +9,7 @@ parser = JsonOutputParser(pydantic_object=None)  # 也可以自定义pydantic模
 
 # 初始化LLM
 llm = ChatOpenAI(
-        api_key="sk-50653c0007284daa9a52bed1b99e537d",
+        api_key="sk-",
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
         model="qwen-turbo",
         temperature=0.7

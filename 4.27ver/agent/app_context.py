@@ -35,7 +35,7 @@ class AppContext:
         
         # 初始化LLM
         self.llm = ChatOpenAI(
-            api_key="sk-50653c0007284daa9a52bed1b99e537d",
+            api_key=os.getenv('DASHSCOPE_API_KEY'),
             base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
             model="qwen2.5-7b-instruct-1m",
             temperature=0.3,

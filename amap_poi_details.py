@@ -7,7 +7,7 @@ import os
 
 
 # 配置
-AMAP_KEY = 'd477f25785fee6455f468f4702ff7bd5'
+AMAP_KEY = os.getenv('AMAP_KEY')  # 从环境变量中获取API密钥
 MYSQL_HOST = 'localhost'
 MYSQL_USER = 'root'
 MYSQL_PASSWORD = '8384888'
