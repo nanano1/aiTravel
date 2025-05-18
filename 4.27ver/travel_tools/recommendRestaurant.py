@@ -3,15 +3,12 @@ import json
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from math import radians, sin, cos, sqrt, atan2, degrees
-
+from agent.app_context import AppContext
 import requests
 
-qwen_llm=ChatOpenAI(
-            api_key="sk-",
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-            model="qwen2.5-14b-instruct-1m",
-            temperature=0.3,
-        )
+app_context = AppContext.get_instance()
+qwen_llm=app_context.llm
+
 
 
 def calculate_center_and_radius(coord1: list, coord2: list) -> dict:
@@ -82,10 +79,11 @@ getResInfo_prompt = PromptTemplate.from_template("""
     - 价格（price）
     - 菜系（cuisine）
     ## 目标餐厅前后景点的信息prev_poi和next_poi
+    按照顺序去查找,如果用户是想让你推荐,根据午餐或者晚餐来推测前后的poi可能是哪个
     - 提取前一个景点的名称和经纬度
     - 提取后一个景点的名称和经纬度
     - 提取要被替换的POI的前一个POI的名称和经纬度
-    - 提取要被替换的POI的后一个POI的名称和经纬度,当无下个景点时，自动将`next_poi`替换为酒店信息,如果酒店信息是默认酒店,那就next_poi返回和prev_poi一样的信息                                                                                  
+    - 提取要被替换的POI的后一个POI的名称和经纬度,当无下个景点时，那就next_poi返回和prev_poi一样的信息                                                                                  
     ## day_info则是提取要被替换或者插入的POI所在的日期和顺序
     - 提取要被替换或者插入的POI所在的日期
     - 提取要被替换或者插入的POI在当天的顺序
@@ -96,18 +94,18 @@ getResInfo_prompt = PromptTemplate.from_template("""
     "target_restaurant": {{
         "res_info"{{
             "poi_type": "餐厅",
-            "name": "南京香格里拉大酒店·江南灶",
+            "name": "被替换餐厅的名称",
             "coordinates": [32.0782506, 118.7828654],
             "price": 334.0,
             "cuisine": "江浙菜",
             "recommended_food": ["慈城年糕烧大黄鱼", "蜜汁小番茄"],
         }},
         "prev_poi": {{
-            "name": "南京博物院",
+            "name": "前一个景点名称",
             "coordinates": [32.046791, 118.831617]
             }},
         "next_poi": {{
-            "name": "钟山风景名胜区",
+            "name": "后一个景点名称",
             "coordinates": [32.069291, 118.859406]
         }},
         "day_info":{{
@@ -125,7 +123,7 @@ getResPreference_prompt=PromptTemplate.from_template("""
 用户输入: "{user_input}"
 原本偏好:"{preference_text}"
 检查用户输入有没有补充新的其中一个偏好,或者更新原有的偏好,如果有,则更新,如果没有,则返回原本的偏好.注意如果用户没有提到某一项,那么就按照原有的不变即可,不要清空为默认
-    # 提取要求
+2. 提取要求
 | 维度 | 提取规则 | 示例 |
 |------|----------|------|
 | 预算budget | 匹配数字/区间/模糊量词 | "人均50左右" → [40,60] |
@@ -322,89 +320,6 @@ def search_restaurants_baidu(center: list, radius: float, preferences=None) -> l
     return recommendations
 
 
-
-def get_first_itinerary(file_path: str = 'data/sample_trip.json'):
-    """
-    从指定的JSON文件中读取并返回第一个行程信息
-    Returns:
-        dict: 第一个行程的完整信息，包含metadata和daily_itinerary
-        如果文件不存在或格式错误，返回None
-    """
-    try:
-        # 打开并读取JSON文件
-        with open(file_path, 'r', encoding='utf-8') as f:
-            trip_data = json.load(f)
-            
-        # 获取第一个行程
-        if trip_data and 'travel_itineraries' in trip_data and trip_data['travel_itineraries']:
-            return trip_data['travel_itineraries'][0]
-        else:
-            print("未找到有效的行程数据")
-            return None
-            
-    except FileNotFoundError:
-        print(f"未找到文件: {file_path}")
-        return None
-    except json.JSONDecodeError:
-        print(f"JSON文件格式错误: {file_path}")
-        return None
-    except Exception as e:
-        print(f"读取行程信息时发生错误: {e}")
-        return None
-
-
-def search_restaurants_by_center_radius(center: list, radius: float) -> list:
-    """
-    根据中心点和半径搜索周边餐厅
-    
-    Args:
-        center: 中心点坐标 [纬度, 经度]
-        radius: 搜索半径（公里）
-    
-    Returns:
-        list: 餐厅列表，每个餐厅包含名称、评分、价格等信息
-    """
-    url = "https://restapi.amap.com/v3/place/around"
-    
-    # 将公里转换为米
-    radius_meters = int(radius * 1000)
-    
-    # 将坐标转换为高德地图API所需的格式 "经度,纬度"
-    location = f"{center[1]},{center[0]}"
-    
-    params = {
-        "key": "d477f25785fee6455f468f4702ff7bd5",
-        "location": location,
-        "radius": radius_meters,
-        "keywords": "餐馆",
-        "types": "050000",
-        "offset": 25,
-        "page": 1,
-        "extensions": "all",
-        "show_fields": "business"
-    }
-
-    try:    
-            response = requests.get(url, params=params)
-            print(f"响应状态码: {response.status_code}")
-            print(f"响应内容: {response.text}")
-
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("status") == "1":
-                    pois = result.get("pois", [])
-                    if not pois:
-                        print("没有找到符合条件的餐馆。你可以尝试调整搜索范围或更换中心点。")
-                    for poi in pois:
-                        biz_ext = poi.get('biz_ext', {})
-                        rating = biz_ext.get('rating', '无评分')
-                        print(f"名称: {poi['name']}, 评分: {rating}")
-                else:
-                    print(f"请求成功，但返回结果状态错误: {result}")
-            else:
-                print(f"请求失败，状态码: {response.status_code}")
-    except requests.RequestException as e:
-        print(f"请求异常: {e}")
 def generate_res_recommendation(target_info: dict, preference_analysis=None):
     """生成餐厅推荐"""
     # 将前后景点坐标提取出来计算中心点和半径

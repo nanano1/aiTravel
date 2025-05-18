@@ -289,6 +289,9 @@ def add_poi_node(state: TripState) -> TripState:
                     is_removal=False  # 指定为推荐场景
                 )
                 
+                # 从score_details中获取平均距离信息
+                avg_distance = poi.get('score_details', {}).get('avg_distance')
+                
                 recommended_pois_with_reason.append({
                     "uid": poi['poi_id'],
                     "tel": poi['tel'],
@@ -302,7 +305,7 @@ def add_poi_node(state: TripState) -> TripState:
                     "lng": poi['coordinates'][1],
                     "address": poi.get('address', ''),
                     "image_url": poi.get('image_url', ''),
-                    "distance": poi.get('distance', '未知')
+                    "distance": avg_distance
                 })
             
             print("\n推荐的新景点:")
@@ -315,6 +318,13 @@ def add_poi_node(state: TripState) -> TripState:
             for i, rec in enumerate(recommended_pois_with_reason[:5], 1):  # 限制最多5个推荐
                 response_text += f"{i}. {rec['name']} - {rec['type']}\n"
                 response_text += f"   评分：{rec['rating']}\n"
+                # 添加到其他景点的平均距离信息
+                avg_distance_text = "未知"
+                if rec['avg_distance'] is not None:
+                    # 转换为公里并保留一位小数
+                    distance_km = rec['avg_distance'] / 1000
+                    avg_distance_text = f"{distance_km:.1f}公里"
+                response_text += f"   平均距离：{avg_distance_text}\n"
                 response_text += f"   推荐理由：{rec['recommendation_reason']}\n\n"
             
             response_text += "您可以选择其中一个或多个添加到行程中，或者告诉我您的其他偏好，我可以重新推荐。"
@@ -435,6 +445,9 @@ def remove_poi_node(state: TripState) -> TripState:
             is_removal=True  # 指定为删除场景
         )
         
+        # 从score_details中获取平均距离信息
+        avg_distance = poi.get('score_details', {}).get('avg_distance')
+        
         removed_pois_with_reason.append({
             "name": poi.get("name", ""),
             "type": poi.get("type", ""),
@@ -444,7 +457,7 @@ def remove_poi_node(state: TripState) -> TripState:
             "coordinates": poi.get('coordinates', [0, 0]),
             "address": poi.get('address', ''),
             "image_url": poi.get('image_url', ''),
-            "distance": poi.get('distance', '未知')
+            "distance": avg_distance
         })
     
     print("\n建议删除的POI:")
@@ -457,6 +470,13 @@ def remove_poi_node(state: TripState) -> TripState:
     for i, rec in enumerate(removed_pois_with_reason[:5], 1):  # 限制最多5个推荐
         response_text += f"{i}. {rec['name']} - {rec['type']}\n"
         response_text += f"   评分：{rec['rating']}\n"
+        # 添加到其他景点的平均距离信息
+        avg_distance_text = "未知"
+        if rec['avg_distance'] is not None:
+            # 转换为公里并保留一位小数
+            distance_km = rec['avg_distance'] / 1000
+            avg_distance_text = f"{distance_km:.1f}公里"
+        response_text += f"   平均距离：{avg_distance_text}\n"
         response_text += f"   删除理由：{rec['removal_reason']}\n\n"
     
     response_text += "您是否同意删除这些景点？或者您可以告诉我您的其他偏好，我可以重新推荐。"

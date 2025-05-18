@@ -309,7 +309,7 @@ def calculate_distances_to_pois(target_poi, existing_pois):
     
     # 按距离排序
     results.sort(key=lambda x: x["distance"])
-    
+    print("calculate_distances_to_pois results",results)
     return results
 
 def normalize_score(value, min_val, max_val):
@@ -376,7 +376,7 @@ def evaluate_preference_match(poi_intro, prefer_tags, llm_client=None):
 
 def batch_calculate_compatibility(pois, existing_pois, max_distance=10000):
     """
-    批量计算POI的位置兼容性
+    批量计算POI的位置兼容性和平均距离
     
     Args:
         pois: 候选POI列表
@@ -384,10 +384,10 @@ def batch_calculate_compatibility(pois, existing_pois, max_distance=10000):
         max_distance: 最大距离(米)，用于归一化
         
     Returns:
-        list: 包含位置兼容性分数的列表
+        dict: 包含位置兼容性分数和平均距离的字典
+        - compatibility_scores: 兼容性分数列表
+        - avg_distances: 平均距离列表
     """
-    compatibility_scores = []
-    
     # 提取所有现有POI的坐标
     existing_coords = []
     for poi in existing_pois:
@@ -396,7 +396,10 @@ def batch_calculate_compatibility(pois, existing_pois, max_distance=10000):
     print("existing_coords",existing_coords)
     if not existing_coords:
         # 如果没有现有POI，所有候选POI的兼容性都是中等
-        return [0.5] * len(pois)
+        return {
+            "compatibility_scores": [0.5] * len(pois),
+            "avg_distances": [None] * len(pois)
+        }
     
     # 按批次处理，每次处理一个现有POI与所有候选POI
     poi_distances = {}  # 存储每个候选POI到所有现有POI的距离
@@ -404,7 +407,7 @@ def batch_calculate_compatibility(pois, existing_pois, max_distance=10000):
     # 初始化距离列表
     for i, poi in enumerate(pois):
         poi_distances[i] = []
-
+    
     # 对每个现有POI，计算所有候选POI到它的距离
     for existing_coord in existing_coords:
         # 准备所有候选POI的坐标
@@ -418,7 +421,7 @@ def batch_calculate_compatibility(pois, existing_pois, max_distance=10000):
         
         # 批量计算距离
         batch_results = batch_calculate_distances(candidate_coords, existing_coord)
-
+        
         # 处理结果
         for i, result in enumerate(batch_results):
             if i < len(valid_indices):
@@ -426,6 +429,7 @@ def batch_calculate_compatibility(pois, existing_pois, max_distance=10000):
                 distance = int(result.get("distance", max_distance))
                 poi_distances[poi_idx].append(distance)
     print("poi_distances",poi_distances)
+    
     # 计算每个候选POI的平均距离，并转换为兼容性分数
     avg_distances = []
     for i in range(len(pois)):
@@ -435,11 +439,12 @@ def batch_calculate_compatibility(pois, existing_pois, max_distance=10000):
         else:
             avg_distances.append(None)  # 标记无数据的POI
     print("avg_distances",avg_distances)
+    
     # Step 2: 计算全局最小和最大平均距离
     valid_avg = [d for d in avg_distances if d is not None]
     min_avg = min(valid_avg) if valid_avg else 0
     max_avg = max(valid_avg) if valid_avg else 1
-
+    
     compatibility_scores = []
     for d in avg_distances:
         if d is None:
@@ -451,26 +456,13 @@ def batch_calculate_compatibility(pois, existing_pois, max_distance=10000):
                 normalized = (max_avg - d) / (max_avg - min_avg)
             compatibility = normalized
         compatibility_scores.append(compatibility)
+    
+    return {
+        "compatibility_scores": compatibility_scores,
+        "avg_distances": avg_distances
+    }
 
-    return compatibility_scores
-    """
-    for i in range(len(pois)):
-        distances = poi_distances.get(i, [])
-        if distances:
-            avg_distance = np.mean(distances)
-            print("avg_distance",avg_distance)
-            # 距离越近越好，兼容性越高
-            compatibility = 1 - normalize_score(avg_distance, 0, max_distance)
-        else:
-            compatibility = 0.5  # 默认中等兼容性
-        
-        compatibility_scores.append(compatibility)
-
-    print("compatibility_scores",compatibility_scores)
-    return compatibility_scores    
-    """
-
-def calculate_utility_score(poi, prefer_tags=None, weights=None, llm_client=None, compatibility_scores=None, poi_index=None):
+def calculate_utility_score(poi, prefer_tags=None, weights=None, llm_client=None, compatibility_data=None, poi_index=None):
     """
     计算POI的效用评分
     
@@ -479,11 +471,11 @@ def calculate_utility_score(poi, prefer_tags=None, weights=None, llm_client=None
         prefer_tags: 用户偏好标签列表(可选)
         weights: 权重列表 [偏好匹配权重, 位置兼容权重, 评分权重]
         llm_client: 用于评估偏好匹配的LLM客户端(可选)
-        compatibility_scores: 已预计算的兼容性分数列表(可选)
+        compatibility_data: 包含兼容性分数和平均距离的字典
         poi_index: 当前POI在列表中的索引，用于获取预计算的兼容性分数
         
     Returns:
-        float: 效用评分(0-1)
+        tuple: (效用评分, 评分详情字典)
     """
     if weights is None:
         weights = [0.5, 0.3, 0.2]  # 默认权重
@@ -492,11 +484,13 @@ def calculate_utility_score(poi, prefer_tags=None, weights=None, llm_client=None
     preference_match = evaluate_preference_match(poi.get("name","")+poi.get("type", ""), prefer_tags, llm_client)
     
     # 2. 位置兼容性
-    location_compatibility = compatibility_scores[poi_index]
+    location_compatibility = compatibility_data["compatibility_scores"][poi_index]
     print("location_compatibility",location_compatibility)
+    
     # 3. 评分得分
     rating_score = calculate_rating_score(poi)
     print("rating_score",rating_score)
+    
     # 计算加权得分
     utility_score = (
         weights[0] * preference_match + 
@@ -508,6 +502,7 @@ def calculate_utility_score(poi, prefer_tags=None, weights=None, llm_client=None
         "preference_match": preference_match,
         "location_compatibility": location_compatibility,
         "rating_score": rating_score,
+        "avg_distance": compatibility_data["avg_distances"][poi_index]  # 添加平均距离信息
     }
 
 def rank_pois_by_utility(pois, existing_pois, prefer_tags=None, weights=None, llm_client=None, is_reversed=False, exclude_self=False):
@@ -528,7 +523,7 @@ def rank_pois_by_utility(pois, existing_pois, prefer_tags=None, weights=None, ll
     """
     if not pois:
         return []
-        
+    
     if weights is None:
         weights = [0.5, 0.3, 0.2]  # 默认权重
     
@@ -538,6 +533,7 @@ def rank_pois_by_utility(pois, existing_pois, prefer_tags=None, weights=None, ll
         avg_distances = calculate_all_pois_avg_distances(pois)
         # 归一化平均距离
         compatibility_scores = normalize_distances_to_scores(avg_distances)
+        
         ranked_pois = []
         
         for i, poi in enumerate(pois):
@@ -566,19 +562,22 @@ def rank_pois_by_utility(pois, existing_pois, prefer_tags=None, weights=None, ll
             }
             
             ranked_pois.append(poi_with_score)
+        
+        # 对删除场景也需要进行排序
+        ranked_pois.sort(key=lambda x: x["utility_score"], reverse=not is_reversed)
     else:
         # 标准场景：添加新POI或不需要排除自身的删除
-        # 预先批量计算所有POI的位置兼容性分数
-        compatibility_scores = batch_calculate_compatibility(pois, existing_pois)
-        print("compatibility_scores", compatibility_scores)
-
+        # 预先批量计算所有POI的位置兼容性分数和平均距离
+        compatibility_data = batch_calculate_compatibility(pois, existing_pois)
+        print("compatibility_data", compatibility_data)
+        
         ranked_pois = []
         
         for i, poi in enumerate(pois):
             # 计算效用评分
             utility_score, score_details = calculate_utility_score(
                 poi, prefer_tags, weights, llm_client,
-                compatibility_scores, i
+                compatibility_data, i
             )
             
             # 添加评分到POI字典
@@ -587,9 +586,9 @@ def rank_pois_by_utility(pois, existing_pois, prefer_tags=None, weights=None, ll
             poi_with_score["score_details"] = score_details
             
             ranked_pois.append(poi_with_score)
-    
-    # 按效用评分排序：默认降序（最高分在前），删除场景用升序（最低分在前）
-    ranked_pois.sort(key=lambda x: x["utility_score"], reverse=not is_reversed)
+        
+        # 按效用评分排序：默认降序（最高分在前），删除场景用升序（最低分在前）
+        ranked_pois.sort(key=lambda x: x["utility_score"], reverse=not is_reversed)
     
     return ranked_pois
 
@@ -743,7 +742,6 @@ def generate_recommendation_reason(poi_intro, score_details, prefer_tags, llm_cl
         return f"综合评分低：位置偏远、评分较低"
     else:
         return "不错的选择"
-
 
 def calculate_poi_avg_distance_to_others(poi, other_pois):
     """计算单个POI到其他POI的平均距离

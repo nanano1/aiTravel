@@ -53,7 +53,7 @@ def setup_agent(session_id: str):
         llm=ChatOpenAI(
             api_key="sk-",
             base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-            model="qwen2.5-14b-instruct-1m",
+            model="qwen-turbo-latest",
             temperature=0.3,
         ),
         agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
