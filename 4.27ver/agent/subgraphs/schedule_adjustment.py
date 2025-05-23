@@ -320,9 +320,9 @@ def add_poi_node(state: TripState) -> TripState:
                 response_text += f"   评分：{rec['rating']}\n"
                 # 添加到其他景点的平均距离信息
                 avg_distance_text = "未知"
-                if rec['avg_distance'] is not None:
+                if 'score_details' in rec and rec['score_details'].get('avg_distance') is not None:
                     # 转换为公里并保留一位小数
-                    distance_km = rec['avg_distance'] / 1000
+                    distance_km = rec['score_details']['avg_distance'] / 1000
                     avg_distance_text = f"{distance_km:.1f}公里"
                 response_text += f"   平均距离：{avg_distance_text}\n"
                 response_text += f"   推荐理由：{rec['recommendation_reason']}\n\n"
@@ -472,9 +472,9 @@ def remove_poi_node(state: TripState) -> TripState:
         response_text += f"   评分：{rec['rating']}\n"
         # 添加到其他景点的平均距离信息
         avg_distance_text = "未知"
-        if rec['avg_distance'] is not None:
+        if 'score_details' in rec and rec['score_details'].get('avg_distance') is not None:
             # 转换为公里并保留一位小数
-            distance_km = rec['avg_distance'] / 1000
+            distance_km = rec['score_details']['avg_distance'] / 1000
             avg_distance_text = f"{distance_km:.1f}公里"
         response_text += f"   平均距离：{avg_distance_text}\n"
         response_text += f"   删除理由：{rec['removal_reason']}\n\n"
@@ -581,7 +581,6 @@ def handle_selection_node(state: TripState) -> TripState:
     
     if not recommended_pois_from_context:
         print("警告: 在 handle_selection_node 中未找到推荐的 POI 列表。")
-        # 可能直接从 optimize_route 过来的，或者流程异常
         return {
             **state,
             "flow_state": {
@@ -592,38 +591,25 @@ def handle_selection_node(state: TripState) -> TripState:
             "response": "未能处理选择，将尝试直接优化当前行程。",
             "conversation_history": state.get("conversation_history", []) + [{"role": "assistant", "content": "未能处理选择，将尝试直接优化当前行程。"}]
         }
-    # 使用LLM提取用户选择的POI
-    prompt = PromptTemplate.from_template("""
-    # 背景信息
-    用户输入: "{user_input}"
-    
-    推荐的景点列表:
-    {pois_list}
-    
-    # 任务
-    请分析用户的输入，确定用户选择了哪些景点。
-    
-    # 输出格式
-    请仅返回用户选择的景点索引列表（例如 [1, 3]），如果无法确定，则返回 []：
-    """)
-    
-    # 构造POI列表文本
-    pois_text = ""
-    for i, poi in enumerate(recommended_pois_from_context, 1):
-        pois_text += f"{i}. {poi['name']}\n"
-    
-    # 使用LLM提取用户选择
-    selection_text = app_context.llm.predict(
-        prompt.format(user_input=user_input, pois_list=pois_text)
-    ).strip()
-    
-    # 解析选择结果
-    try:
-        selected_indices = json.loads(selection_text)
-        selected_pois = [recommended_pois_from_context[i-1] for i in selected_indices if 0 < i <= len(recommended_pois_from_context)]
-    except:
+
+    # 从用户输入中提取景点名称
+    # 去掉"我选择了"前缀
+    if "我已选择了" in user_input:
+        selected_names = user_input.split("我已选择了")[1]
+        # 按逗号分隔获取景点名称列表
+        selected_names = [name.strip() for name in selected_names.split(",") if name.strip()]
+        
+        # 根据名称匹配推荐列表中的POI
+        selected_pois = []
+        for name in selected_names:
+            for poi in recommended_pois_from_context:
+                if poi["name"] == name:
+                    selected_pois.append(poi)
+                    break
+    else:
         selected_pois = []
     
+    print(f"selected_pois: {selected_pois}")
     # 整合POI列表
     updated_full_poi_list = existing_pois.copy()
     
@@ -746,7 +732,7 @@ def optimize_route_node(state: TripState) -> TripState:
     # 获取POI列表
     # 优先使用handle_selection_node传递的updated_full_poi_list
     all_pois = state["flow_state"].get("updated_full_poi_list", [])
-    
+    print(f"optimize_route_node中的pois列表: {all_pois}")
     # 如果没有传递updated_full_poi_list，则从当前行程中提取POI
     if not all_pois:
         for day in trip_json["daily_itinerary"]:
@@ -765,15 +751,9 @@ def optimize_route_node(state: TripState) -> TripState:
         }
     
     # 获取总天数
-    total_days = trip_json["metadata"]["total_days"]
-    
-    # 获取每天最大POI数量
-    avg_pois_per_day = math.ceil(len(all_pois) / total_days)
-    max_pois_per_day = max([
-        sum(1 for item in day["schedule"] if item["poi_type"] == "景点")
-        for day in trip_json["daily_itinerary"]
-    ])
-    pois_per_day = max(avg_pois_per_day, max_pois_per_day)
+    total_days = state["flow_state"]["target_days"]
+    pois_per_day = state["flow_state"]["daily_limit"]
+
     
     try:
         # 1. 使用KMeans进行聚类，限制每天POI数量
@@ -795,20 +775,31 @@ def optimize_route_node(state: TripState) -> TripState:
             if day_pois:
                 # 优化当天POI的访问顺序
                 optimized_pois = optimize_daily_route(day_pois)
-                
+                print(f"optimize_daily_route优化后的POI: {optimized_pois}")
                 # 将优化后的POI添加到attractions列表
                 for order_idx, poi in enumerate(optimized_pois, 1):
+                    # 统一处理坐标
+                    latitude = 0
+                    longitude = 0
+                    if poi.get("coordinates"):
+                        latitude = poi["coordinates"][0]
+                        longitude = poi["coordinates"][1]
+                    elif poi.get("lat") is not None and poi.get("lng") is not None:
+                        latitude = poi["lat"]
+                        longitude = poi["lng"]
+                    
                     attraction = {
                         "name": poi.get("name", ""),
+                        "poi_id": poi.get("uid", ""),
+                        "tel": poi.get("tel", ""),
                         "day": day_idx,
                         "order": order_idx,
                         "transport": "",
                         "type": "景点",
-                        "poi_id": poi.get("poi_id", ""),
-                        "latitude": poi.get("coordinates", [0, 0])[0] if isinstance(poi.get("coordinates"), list) else poi.get("latitude", 0),
-                        "longitude": poi.get("coordinates", [0, 0])[1] if isinstance(poi.get("coordinates"), list) else poi.get("longitude", 0),
+                        "latitude": latitude,
+                        "longitude": longitude,
                         "address": poi.get("address", ""),
-                        "type_desc": poi.get("type_desc", "")
+                        "type_desc": poi.get("type", "")
                     }
                     attractions.append(attraction)
         

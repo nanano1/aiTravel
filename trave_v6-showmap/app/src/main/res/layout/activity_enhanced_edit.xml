@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- 行程标题和位置区域 -->
+        <TextView
+            android:id="@+id/itineraryNameText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:hint="行程单标题"
+            android:textSize="28dp"
+            android:layout_marginBottom="10dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/imageView3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:srcCompat="@drawable/marker"
+                android:layout_marginTop="5dp"
+                android:layout_marginEnd="10dp"
+                android:layout_marginStart="5dp"/>
+
+            <TextView
+                android:id="@+id/itineraryLocationText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="地点"
+                android:textSize="20dp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 操作说明 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="拖动左侧手柄可调整景点顺序，点击删除按钮可移除景点"
+            android:textStyle="italic"
+            android:textSize="14dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- 景点列表 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/attractionsRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical" />
+
+        <!-- 添加景点按钮 -->
+        <Button
+            android:id="@+id/addAttractionBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="添加新景点"
+            android:textStyle="bold"
+            android:textSize="18dp"
+            android:textColor="@color/white"
+            android:background="@color/blue"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- 保存按钮 -->
+        <Button
+            android:id="@+id/saveEditBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="保存修改"
+            android:textStyle="bold"
+            android:textSize="20dp"
+            android:textColor="@color/white"
+            android:background="@color/orange"/>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout> 

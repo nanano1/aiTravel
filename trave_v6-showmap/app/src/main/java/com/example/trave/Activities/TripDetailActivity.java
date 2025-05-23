@@ -30,12 +30,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TripDetailActivity extends AppCompatActivity {
+    private static final String TAG = "TripDetailActivity";
     private static final int EDIT_ITINERARY_REQUEST_CODE = 2;
     public static final int REQUEST_CODE_EDIT = 2;
     private RecyclerView recyclerViewItinerary;
     private TextView textViewtest;
     private TripDetailAdapter tripDetailAdapter;
     private DatabaseHelper dbHelper;
+    private Button aiButton; // 新增AI优化按钮
 
     ArrayList<Sites> SitesList;
     @Override
@@ -45,7 +47,11 @@ public class TripDetailActivity extends AppCompatActivity {
         dbHelper = new DatabaseHelper(this);
 
         recyclerViewItinerary = findViewById(R.id.recyclerViewItinerary);
-        recyclerViewItinerary.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.HORIZONTAL, false));
+        
+        // 设置水平布局管理器，并启用嵌套滚动
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        recyclerViewItinerary.setLayoutManager(layoutManager);
+        recyclerViewItinerary.setNestedScrollingEnabled(true);
 
         long itineraryId = getIntent().getLongExtra("itineraryId", 0);
         ArrayList<ItineraryAttraction> itineraryAttractionList = dbHelper.getItineraryAttractions(itineraryId);
@@ -56,6 +62,18 @@ public class TripDetailActivity extends AppCompatActivity {
         tripDetailAdapter=new TripDetailAdapter(itineraryId,this,itineraryAttractionList);
         recyclerViewItinerary.setAdapter(tripDetailAdapter);
 
+        // 初始化AI优化按钮
+        aiButton = findViewById(R.id.aiBtn);
+        if (aiButton != null) {
+            aiButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    handleAiButtonClick(itineraryId);
+                }
+            });
+        } else {
+            Log.e(TAG, "AI优化按钮未找到！请确认布局文件中已添加此按钮");
+        }
 
         Button deleteButton = findViewById(R.id.deleteBtn);
         deleteButton.setOnClickListener(new View.OnClickListener() {
@@ -83,14 +101,12 @@ public class TripDetailActivity extends AppCompatActivity {
             }
         });
 
-
-
         Button editButton=findViewById(R.id.btnEditItinerary);
         editButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Context context = v.getContext();
-                Intent intent = new Intent(context, detailEditActivity.class);
+                Intent intent = new Intent(context, EnhancedEditActivity.class); // 使用新的增强编辑界面
                 intent.putExtra("attractilistSize",String.valueOf(itineraryAttractionList.size()));
                 intent.putExtra("itineraryTittle", tittle);
                 intent.putExtra("itineraryId", itineraryId);
@@ -116,7 +132,7 @@ public class TripDetailActivity extends AppCompatActivity {
                     // 发布行程单
                     dbHelper.publishItinerary(itineraryId);
 
-                    // 更新按钮文本为“已发布”
+                    // 更新按钮文本为"已发布"
                     releaseButton.setText("已发布");
 
                     // 提示用户已发布
@@ -129,7 +145,19 @@ public class TripDetailActivity extends AppCompatActivity {
             // 你可以选择禁用按钮，防止重复点击
             releaseButton.setEnabled(false);
         }
+    }
 
+    // 处理AI优化按钮点击事件
+    private void handleAiButtonClick(long itineraryId) {
+        try {
+            Log.i(TAG, "准备启动 AIChatActivity，传递 itineraryId: " + itineraryId);
+            Intent intent = new Intent(TripDetailActivity.this, AIChatActivity.class);
+            intent.putExtra("itineraryId", itineraryId);
+            startActivity(intent);
+        } catch (Exception e) {
+            Log.e(TAG, "启动 AIChatActivity 失败", e);
+            Toast.makeText(this, "启动AI优化失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override

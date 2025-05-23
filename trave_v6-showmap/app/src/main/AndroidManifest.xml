@@ -41,6 +41,8 @@
             android:exported="false"/>
         <activity android:name=".Activities.TripDetailMainActivity"
             android:exported="false"/>
+        <activity android:name=".Activities.EnhancedEditActivity"
+            android:exported="false"/>
         <activity
             android:name=".Activities.MainActivity"
             android:exported="false" />

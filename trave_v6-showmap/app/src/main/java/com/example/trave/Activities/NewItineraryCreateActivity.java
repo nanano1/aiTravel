@@ -138,12 +138,23 @@ public class NewItineraryCreateActivity extends AppCompatActivity implements Inp
         
         attractionDialog = new Dialog(this);
         attractionDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        attractionDialog.setContentView(R.layout.dialog_add_attraction);
+        attractionDialog.setContentView(R.layout.dialog_add_attraction_search);
         
         // 初始化对话框中的UI元素
         searchAttractionEditText = attractionDialog.findViewById(R.id.searchAttractionEditText);
         Button cancelButton = attractionDialog.findViewById(R.id.cancelButton);
         Button confirmButton = attractionDialog.findViewById(R.id.confirmButton);
+        
+        // 确保searchAttractionEditText不为null
+        if (searchAttractionEditText == null) {
+            Log.e(TAG, "searchAttractionEditText is null! Dialog layout may be incorrect.");
+            Toast.makeText(this, "初始化对话框失败", Toast.LENGTH_SHORT).show();
+            attractionDialog.dismiss();
+            return;
+        }
+        
+        // 保存到类成员变量
+        this.searchAttractionEditText = searchAttractionEditText;
         
         // 设置景点搜索的监听器
         searchAttractionEditText.addTextChangedListener(new TextWatcher() {

@@ -34,7 +34,7 @@ def route_to_subgraph(state: TripState) -> TripState:
     3. 替换餐厅
     4. 替换酒店
     5. 结束对话
-    6. 调整行程天数（延长/缩短）
+    6. 调整行程天数（延长/缩短）:比如说新增一天行程，安排多一天行程，我有多一天时间等
     7. 调整每日节奏（增减景点密度）
     8. 整体风格替换（如历史→自然）
     9. 路线优化（不增减只重排）
@@ -65,27 +65,16 @@ def route_to_subgraph(state: TripState) -> TripState:
             print(f"识别到的活动流程: {active_flow}")
             break
     
-    # 当没有识别到有效的活动流程时，返回提示信息
+    # 当没有识别到有效的活动流程时，路由到通用问答节点
     if not active_flow:
-        guess_prompt=PromptTemplate.from_template(
-            """
-        你是一个旅行规划专家，专门帮助用户制定旅行计划和解决旅行相关的问题。
-        请根据用户的问题提供建议和解决方案。
-
-        用户问题: {user_input}
-        """
-        )
-        response = llm.predict(guess_prompt.format(user_input=user_input)).strip()
- 
-        history = state["conversation_history"]
-        history.append({"role": "assistant", "content": response})
+        print("未识别到具体意图，路由到通用问答节点")
         return {
             **state,
-            "response": response,
-            "conversation_history": history,
-            "completed": True
+            "flow_state": {
+                **state["flow_state"],
+                "active_flow": "general_qa"
+            }
         }
-    
     
     return {
         **state,
@@ -128,3 +117,36 @@ def decide_if_done(state: TripState) -> str:
     if "再见" in state["user_input"].lower() or "结束" in state["user_input"].lower():
         return "end"
     return "continue"
+
+def general_qa_node(state: TripState) -> TripState:
+    """通用问答节点：使用LLM直接回答用户问题"""
+    # 获取最新的AppContext实例
+    current_app_context = AppContext.get_instance()
+    llm = current_app_context.llm
+    
+    # 构建提示模板
+    qa_prompt = PromptTemplate.from_template(
+        """
+        你是一个专业的旅行规划助手，请根据用户的问题提供专业、友好的回答。
+        如果问题涉及具体的旅行建议，请尽可能给出详细和实用的建议。
+        如果问题不清楚，可以礼貌地请求用户提供更多信息。
+
+        用户问题: {user_input}
+
+        请提供你的回答：
+        """
+    )
+    
+    # 生成回答
+    response = llm.predict(qa_prompt.format(user_input=state["user_input"])).strip()
+    
+    # 更新对话历史
+    history = state["conversation_history"]
+    history.append({"role": "assistant", "content": response})
+    
+    return {
+        **state,
+        "response": response,
+        "conversation_history": history,
+        "completed": True
+    }

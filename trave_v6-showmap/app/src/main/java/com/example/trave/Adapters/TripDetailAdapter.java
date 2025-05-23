@@ -10,7 +10,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.trave.DatabaseHelper;
@@ -56,8 +56,16 @@ public class TripDetailAdapter extends RecyclerView.Adapter<TripDetailAdapter.Tr
         } else {
             Log.e("TripDetailAdapter", "No daily attractions for day " + day + ". dailyAttractions is null.");
         }
+        
+        // 使用LinearLayoutManager替代GridLayoutManager，并设置为垂直方向
+        LinearLayoutManager layoutManager = new LinearLayoutManager(holder.itemView.getContext());
+        layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        holder.recyclerViewItems.setLayoutManager(layoutManager);
+        
+        // 启用嵌套滚动
+        holder.recyclerViewItems.setNestedScrollingEnabled(true);
+        
         AttractionAdapter itemAdapter = new AttractionAdapter(dailyAttractions);
-        holder.recyclerViewItems.setLayoutManager(new GridLayoutManager(holder.itemView.getContext(),1));
         holder.recyclerViewItems.setAdapter(itemAdapter);
     }
 

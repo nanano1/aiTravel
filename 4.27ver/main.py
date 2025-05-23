@@ -121,14 +121,17 @@ def process_message(message, itinerary_info: dict) -> str:
         # 处理景点详细信息
         attraction_data = {
             'name': attraction.get('name', ''),
-            'poi_type': attraction.get('type', ''),  # 默认为景点类型
+            'poi_type': attraction.get('type', ''),
+            'uid': attraction.get('poi_id', ''),  # 默认为景点类型
             'time': {
                 'start': '09:00',
                 'end': '10:30'
             },
             'duration_hours': 1.5,
             'notes': [],
-            'price': 0
+            'price': 0,
+            'type': attraction.get('type_desc', ''),
+            'tel': attraction.get('tel', '')
         }
         
         # 如果有经纬度信息，添加

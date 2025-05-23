@@ -1,4 +1,4 @@
-from agent.nodes import decide_if_done, route_to_subgraph, view_itinerary_node
+from agent.nodes import decide_if_done, route_to_subgraph, view_itinerary_node,general_qa_node
 
 from langgraph.graph import StateGraph, END,START
 from agent.state import TripState
@@ -17,17 +17,15 @@ def create_main_graph():
 
     graph.add_node("router", route_to_subgraph)
     graph.add_node("view_itinerary", view_itinerary_node)
+    graph.add_node("general_qa", general_qa_node)  # 添加通用问答节点
 
-    
     attraction_graph = create_attraction_graph()
-    # 替换你原来的 graph.add_subgraph 这行
-    graph.add_node("attraction_flow", attraction_graph)  # 使用 add_node 添加子图
+    graph.add_node("attraction_flow", attraction_graph)
     restaurant_graph = create_restaurant_graph()
-    graph.add_node("restaurant_flow", restaurant_graph)  # 使用 add_node 添加子图
+    graph.add_node("restaurant_flow", restaurant_graph)
 
-    # 添加整体调整子图
-    schedule_adjustment_graph = create_schedule_adjustment_graph_test()  # 创建整体调整子图
-    graph.add_node("schedule_adjustment_flow", schedule_adjustment_graph)  # 添加整体调整子图
+    schedule_adjustment_graph = create_schedule_adjustment_graph_test()
+    graph.add_node("schedule_adjustment_flow", schedule_adjustment_graph)
 
     print("设置边：定义节点之间的连接关系...")
     graph.add_edge(START, "router")
@@ -39,7 +37,9 @@ def create_main_graph():
     )
     
     graph.add_edge("attraction_flow", END)
-    graph.add_edge("schedule_adjustment_flow", END)  # 添加整体调整子图的结束边
+    graph.add_edge("restaurant_flow", END)
+    graph.add_edge("schedule_adjustment_flow", END)
+    graph.add_edge("general_qa", END)  # 添加通用问答节点到END的边
 
     print("设置条件边：根据是否完成决定是结束还是继续...")
     graph.add_conditional_edges(
@@ -65,6 +65,9 @@ def routing_function(state: TripState) -> str:
     elif state["flow_state"]["active_flow"] == "整体调整":
         print("路由到整体调整子图")
         return "schedule_adjustment_flow"
+    elif state["flow_state"]["active_flow"] == "general_qa":
+        print("路由到 general_qa")
+        return "general_qa"
     else:
         print("结束")
         return END

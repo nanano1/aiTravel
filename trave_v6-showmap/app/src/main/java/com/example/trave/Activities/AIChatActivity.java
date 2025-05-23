@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.trave.Adapters.ChatAdapter;
+import com.example.trave.Adapters.ChatItineraryAdapter;
 import com.example.trave.Adapters.ItineraryDetailAdapter;
 import com.example.trave.Adapters.POIRecommendationAdapter;
 import com.example.trave.Adapters.RestaurantRecommendationAdapter;
@@ -51,7 +52,7 @@ public class AIChatActivity extends AppCompatActivity implements
     private RecyclerView itineraryRecyclerView;
     private EditText messageInput;
     private Button sendButton;
-    private Button editButton;
+    private Button saveButton;
     private ChatAdapter chatAdapter;
     private RestaurantRecommendationAdapter recommendationsAdapter;
     private ItineraryDetailAdapter itineraryDetailAdapter;
@@ -96,7 +97,7 @@ public class AIChatActivity extends AppCompatActivity implements
         itineraryRecyclerView = findViewById(R.id.itineraryRecyclerView);
         messageInput = findViewById(R.id.messageInput);
         sendButton = findViewById(R.id.sendButton);
-        editButton = findViewById(R.id.editButton);
+        saveButton = findViewById(R.id.saveButton);
     }
 
     private void setupRecyclerViews() {
@@ -131,22 +132,12 @@ public class AIChatActivity extends AppCompatActivity implements
             String message = messageInput.getText().toString().trim();
             if (!message.isEmpty()) {
                 sendMessage(message);
+                messageInput.setText("");
             }
         });
         
-        editButton.setOnClickListener(v -> {
-            boolean isEditMode = !itineraryDetailAdapter.isEditMode();
-            itineraryDetailAdapter.setEditMode(isEditMode);
-            if (isEditMode) {
-                editButton.setText("保存排序");
-                // 退出编辑模式前保存修改
-                Toast.makeText(this, "进入编辑模式，您可以拖动景点调整顺序", Toast.LENGTH_SHORT).show();
-            } else {
-                editButton.setText("编辑行程");
-                if (hasChanges) {
-                    saveItineraryChanges();
-                }
-            }
+        saveButton.setOnClickListener(v -> {
+            saveOptimizedItinerary();
         });
     }
     
@@ -275,7 +266,7 @@ public class AIChatActivity extends AppCompatActivity implements
                     
                     // 处理结构化数据
                     if (responseData.hasStructuredData()) {
-                        processStructuredData(responseData);
+                        processAIResponse(responseData);
                     }
                 });
             } catch (Exception e) {
@@ -288,22 +279,37 @@ public class AIChatActivity extends AppCompatActivity implements
         });
     }
 
-    private void processStructuredData(AIService.AIResponseData responseData) {
-        try {
+    private void processAIResponse(AIService.AIResponseData responseData) {
+        // 添加AI消息到聊天列表
+        addMessage(responseData.getCleanText(), false);
+        
+        // 检查是否有结构化数据
+        if (responseData.hasStructuredData()) {
             String dataType = responseData.getDataType();
             JSONObject structuredData = responseData.getStructuredData();
+            Log.d(TAG, "收到结构化数据，类型: " + dataType);
             
-            Log.d(TAG, "处理结构化数据，类型: " + dataType);
-
-            if ("restaurant_recommendations".equals(dataType)) {
-                handleRestaurantRecommendations(structuredData);
-            } else if ("poi_recommendations".equals(dataType)) {
-                handlePOIRecommendations(structuredData);
-            } else if ("itinerary_update".equals(dataType)) {
-                handleItineraryUpdate(structuredData);
+            try {
+                switch (dataType) {
+                    case "restaurant_recommendations":
+                        handleRestaurantRecommendations(structuredData);
+                        break;
+                    case "poi_recommendations":
+                        handlePOIRecommendations(structuredData);
+                        break;
+                    case "itinerary_update":
+                        handleItineraryUpdate(structuredData);
+                        break;
+                    case "optimized_itinerary":
+                        handleOptimizedItinerary(structuredData);
+                        break;
+                    default:
+                        Log.d(TAG, "未知的数据类型: " + dataType);
+                        break;
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "处理结构化数据时出错", e);
             }
-        } catch (Exception e) {
-            Log.e(TAG, "处理结构化数据失败", e);
         }
     }
 
@@ -416,15 +422,100 @@ public class AIChatActivity extends AppCompatActivity implements
                 } else {
                     addMessage("部分景点添加失败，请重试。", false);
                 }
-                
+                StringBuilder selectedNames = new StringBuilder();
+                for (RecommendedPOI poi : selectedPOIs) {
+                    // 获取POI的原始JSON数据
+                    JSONObject poiData = poi.getOriginalData();
+                    String name = poiData.optString("name");
+                    // 将名称添加到字符串构建器中
+                    if (selectedNames.length() > 0) {
+                        selectedNames.append(", "); // 添加逗号分隔
+                    }
+                    selectedNames.append(name);
+                }
                 // 向AI发送确认消息
-                sendMessage("我已选择了" + selectedPOIs.size() + "个景点");
+                sendMessage("我已选择了" +selectedNames.toString());
             });
         });
     }
 
     private void handleItineraryUpdate(JSONObject data) {
         loadItineraryData();  // 重新加载行程数据
+    }
+
+    // 处理优化后的行程
+    private void handleOptimizedItinerary(JSONObject data) {
+        try {
+            JSONObject itineraryData = data.getJSONObject("itinerary");
+            Log.d(TAG, "收到优化行程数据: " + itineraryData.toString());
+            
+            // 从JSON提取行程景点数据
+            ArrayList<ItineraryAttraction> optimizedAttractions = new ArrayList<>();
+            JSONArray attractions = itineraryData.getJSONArray("attractions");
+            
+            for (int i = 0; i < attractions.length(); i++) {
+                JSONObject attraction = attractions.getJSONObject(i);
+                
+                String name = attraction.getString("name");
+                int day = attraction.getInt("day");
+                int order = attraction.getInt("order");
+                String type = attraction.optString("type", "景点");
+                String transport = attraction.optString("transport", "步行");
+                String poi_id=attraction.getString("poi_id");
+                double latitude=attraction.getDouble("latitude");
+                double longitude=attraction.getDouble("longitude");
+                String address=attraction.getString("address");
+                String tel=attraction.getString("tel");
+                String type_desc=attraction.getString("type_desc");
+                Long uid=dbHelper.addOrGetSite(poi_id,name,latitude,longitude,address,"",tel,"",type_desc,"");
+                                // 创建新的ItineraryAttraction对象
+                ItineraryAttraction item = new ItineraryAttraction(
+                    itineraryId,
+                    uid, // 景点ID可能需要从其他地方获取
+                    day,
+                    order,
+                    name,
+                    transport,
+                    type
+                );
+                
+                // 如果有推荐理由，设置为AI推荐
+                if (attraction.has("reason") && !attraction.optString("reason").isEmpty()) {
+                    item.setAiRecommended(true);
+                    item.setAiRecommendReason(attraction.optString("reason"));
+                }
+                
+                optimizedAttractions.add(item);
+            }
+            
+            // 使用现有适配器更新数据
+            itineraryDetailAdapter.updateAttractions(optimizedAttractions);
+            
+            // 显示保存按钮
+            saveButton.setVisibility(View.VISIBLE);
+            
+        } catch (JSONException e) {
+            Log.e(TAG, "解析优化行程数据出错", e);
+        }
+    }
+    
+    // 保存优化后的行程
+    private void saveOptimizedItinerary() {
+        executorService.execute(() -> {
+            final boolean success = aiService.saveOptimizedItinerary(itineraryId, dbHelper);
+            
+            mainHandler.post(() -> {
+                if (success) {
+                    Toast.makeText(this, "行程保存成功！", Toast.LENGTH_SHORT).show();
+                    // 重新加载行程数据
+                    loadItineraryData();
+                    // 通知AI用户已保存行程
+                    sendMessage("我已保存了优化后的行程");
+                } else {
+                    Toast.makeText(this, "保存行程失败，请重试", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
     }
 
     @Override
@@ -729,17 +820,7 @@ public class AIChatActivity extends AppCompatActivity implements
     
     @Override
     public void onBackPressed() {
-        // 处理返回键
-        if (itineraryDetailAdapter.isEditMode()) {
-            // 如果处于编辑模式，退出编辑模式并保存更改
-            itineraryDetailAdapter.setEditMode(false);
-            editButton.setText("编辑行程");
-            if (hasChanges) {
-                saveItineraryChanges();
-            }
-        } else {
-            super.onBackPressed();
-        }
+        super.onBackPressed();
     }
 
     @Override

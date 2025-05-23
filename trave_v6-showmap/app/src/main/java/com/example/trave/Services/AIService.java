@@ -95,6 +95,7 @@ public class AIService {
                 attractionObj.put("longitude", site.getLongitude());
                 attractionObj.put("address", site.getAddress());
                 attractionObj.put("type_desc", site.getTypeDesc());
+                attractionObj.put("tel", site.getTel());
             }
             
             attractionsArray.put(attractionObj);
@@ -262,16 +263,83 @@ public class AIService {
         return recommendations;
     }
     
+    // 获取优化后的行程数据
+    public JSONObject getOptimizedItinerary() {
+        if (structuredData == null || !hasStructuredDataOfType("optimized_itinerary")) {
+            return null;
+        }
+        
+        try {
+            return structuredData.getJSONObject("itinerary");
+        } catch (JSONException e) {
+            Log.e(TAG, "解析优化行程数据失败: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    // 保存优化后的行程到数据库
+    public boolean saveOptimizedItinerary(long itineraryId, DatabaseHelper dbHelper) {
+        JSONObject itineraryData = getOptimizedItinerary();
+        if (itineraryData == null) {
+            Log.e(TAG, "没有可保存的优化行程数据");
+            return false;
+        }
+        
+        try {
+            // 先清除原有行程中的所有景点
+            dbHelper.deleteAttractionsForItinerary(itineraryId);
+            
+            // 添加新的景点
+            JSONArray attractions = itineraryData.getJSONArray("attractions");
+            for (int i = 0; i < attractions.length(); i++) {
+                JSONObject attraction = attractions.getJSONObject(i);
+                
+                String name = attraction.getString("name");
+                String poiId = attraction.optString("poi_id", "");
+                int day = attraction.getInt("day");
+                int order = attraction.getInt("order");
+                String type = attraction.optString("type", "景点");
+                double latitude = attraction.getDouble("latitude");
+                double longitude = attraction.getDouble("longitude");
+                String address = attraction.optString("address", "");
+                String typeDesc = attraction.optString("type_desc", "");
+                String transport = attraction.optString("transport", "步行");
+                
+                // 添加或获取景点
+                long siteId = dbHelper.addOrGetSite(poiId, name, latitude, longitude, address,
+                        "", "", "", typeDesc, "");
+                
+                if (siteId <= 0) {
+                    Log.e(TAG, "添加景点失败: " + name);
+                    continue;
+                }
+                
+                // 创建新的ItineraryAttraction对象
+                ItineraryAttraction newAttraction = new ItineraryAttraction(
+                        itineraryId, siteId, day, order, name, transport);
+                newAttraction.setType(type);
+                
+                // 添加到行程中
+                long result = dbHelper.addAttraction(newAttraction);
+                if (result <= 0) {
+                    Log.e(TAG, "添加景点到行程失败: " + name);
+                }
+            }
+            
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "保存优化行程失败: " + e.getMessage(), e);
+            return false;
+        }
+    }
+    
     // 处理POI推荐的更新
     public boolean updateItineraryWithPOIRecommendation(long itineraryId, JSONObject recommendationData, DatabaseHelper dbHelper) {
         try {
-            // 获取要替换的景点信息
-            int targetDay = recommendationData.getInt("day");
-            int targetOrder = recommendationData.getInt("order");
 
             // 获取新景点信息
             String name = recommendationData.getString("name");
-
+            String uid=recommendationData.getString("uid");
             double latitude = recommendationData.getDouble("lat");
             double longitude = recommendationData.getDouble("lng");
 
@@ -283,8 +351,7 @@ public class AIService {
             // 以下字段在高德API中可能存在，但在当前数据中可能不存在，使用默认值
             String businessArea = recommendationData.optString("business_area", "");
             String tel = recommendationData.optString("tel", "");
-            String website = recommendationData.optString("website", "");
-            String photos = recommendationData.optString("photos", "");
+
 
             // 打印调试信息
             Log.d(TAG, "更新行程景点 - " +
@@ -295,8 +362,8 @@ public class AIService {
 
             // 添加或获取景点
             // 使用name作为poiId，因为POI可能没有明确的ID
-            long siteId = dbHelper.addOrGetSite(name, name, latitude, longitude, address,
-                    businessArea, tel, website, typeDesc, photos);
+            long siteId = dbHelper.addOrGetSite(uid, name, latitude, longitude, address,
+                    "", tel, "", typeDesc, "");
 
             if (siteId <= 0) {
                 Log.e(TAG, "添加景点失败: " + name);

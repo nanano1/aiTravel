@@ -72,7 +72,10 @@ public class TripDetailMainActivity extends AppCompatActivity {
             return;
         }
 
-        recyclerViewItinerary.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        // 设置水平布局管理器，并启用嵌套滚动
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        recyclerViewItinerary.setLayoutManager(layoutManager);
+        recyclerViewItinerary.setNestedScrollingEnabled(true);
         
         ArrayList<ItineraryAttraction> itineraryAttractionList = dbHelper.getItineraryAttractions(itineraryId);
         Log.d(TAG, "获取到的景点数量: " + (itineraryAttractionList != null ? itineraryAttractionList.size() : 0));

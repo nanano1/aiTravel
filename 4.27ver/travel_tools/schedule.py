@@ -870,14 +870,21 @@ def cluster_pois_kmeans(pois: List[Dict], n_clusters: int, pois_per_day: float =
     coordinates = []
     valid_pois = []
     for poi in pois:
+        coords = None
         if poi.get("coordinates"):
-            coordinates.append(poi["coordinates"])
+            coords = poi["coordinates"]
+        elif poi.get("lat") is not None and poi.get("lng") is not None:
+            coords = [poi["lat"], poi["lng"]]
+        
+        if coords:
+            coordinates.append(coords)
             valid_pois.append(poi)
-    
+        
     if not coordinates:
         return [[] for _ in range(n_clusters)]
    
     total_pois = len(valid_pois)
+    print(f"valid_pois: {valid_pois}")
     print(f"总共有效POI: {total_pois}个")
     
     # 计算每天实际的POI数量上限
@@ -947,10 +954,22 @@ def calculate_cluster_centers(clusters: List[List[Dict]]) -> List[np.ndarray]:
     Returns:
         List[np.ndarray]: 每个聚类的中心点坐标
     """
+    def get_coordinates(poi):
+        if poi.get("coordinates"):
+            return poi["coordinates"]
+        elif poi.get("lat") is not None and poi.get("lng") is not None:
+            return [poi["lat"], poi["lng"]]
+        return None
+
     centers = []
     for cluster in clusters:
         if cluster:
-            coordinates = [poi["coordinates"] for poi in cluster if poi.get("coordinates")]
+            coordinates = []
+            for poi in cluster:
+                coords = get_coordinates(poi)
+                if coords:
+                    coordinates.append(coords)
+            
             if coordinates:
                 center = np.mean(coordinates, axis=0)
                 centers.append(center)
@@ -973,21 +992,41 @@ def optimize_daily_route(pois: List[Dict]) -> List[Dict]:
     if len(pois) <= 1:
         return pois
     
-    n = len(pois)
+    # 首先统一坐标格式
+    def get_coordinates(poi):
+        if poi.get("coordinates"):
+            return poi["coordinates"]
+        elif poi.get("lat") is not None and poi.get("lng") is not None:
+            return [poi["lat"], poi["lng"]]
+        return None
+    
+    # 过滤掉没有坐标的POI
+    valid_pois = []
+    valid_coords = []
+    for poi in pois:
+        coords = get_coordinates(poi)
+        if coords:
+            valid_pois.append(poi)
+            valid_coords.append(coords)
+    
+    if not valid_pois:
+        return pois
+    
+    n = len(valid_pois)
     # 构建距离矩阵
     distance_matrix = np.zeros((n, n))
     
     # 利用batch_calculate_distances减少API调用次数
     for i in range(n):
         # 当前POI作为终点
-        destination_poi = pois[i]["coordinates"]
+        destination_poi = valid_coords[i]
         
         # 收集除了当前POI外的所有其他POI坐标作为起点
         origin_coords = []
         origin_indices = []
         for j in range(n):
             if i != j:  # 排除自身
-                origin_coords.append(pois[j]["coordinates"])
+                origin_coords.append(valid_coords[j])
                 origin_indices.append(j)
         
         if origin_coords:
@@ -1013,7 +1052,13 @@ def optimize_daily_route(pois: List[Dict]) -> List[Dict]:
         current = next_point
     
     # 按照优化后的顺序重排POI
-    optimized_pois = [pois[i] for i in path]
+    optimized_pois = [valid_pois[i] for i in path]
+    
+    # 添加回没有坐标的POI（放在最后）
+    for poi in pois:
+        if not get_coordinates(poi) and poi not in optimized_pois:
+            optimized_pois.append(poi)
+    
     return optimized_pois
 
 def build_optimized_itinerary(clusters: List[List[Dict]], centers: List[np.ndarray]) -> List[Dict]:

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -9,42 +8,120 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="添加景点"
+        android:text="添加新景点"
         android:textSize="20sp"
         android:textStyle="bold"
+        android:gravity="center"
         android:layout_marginBottom="16dp"/>
 
-    <AutoCompleteTextView
-        android:id="@+id/searchAttractionEditText"
+    <!-- 景点名称 -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="搜索景点"
-        android:completionThreshold="1"
-        android:background="@android:drawable/editbox_background"
-        android:padding="12dp"
-        android:layout_marginBottom="16dp"/>
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="景点名称："
+            android:textStyle="bold"
+            android:layout_marginEnd="8dp"/>
+
+        <EditText
+            android:id="@+id/dialogAttractionNameEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="输入景点名称"/>
+    </LinearLayout>
+
+    <!-- 第几天 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="第几天："
+            android:textStyle="bold"
+            android:layout_marginEnd="8dp"/>
+
+        <EditText
+            android:id="@+id/dialogDayNumberEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:hint="输入天数"/>
+    </LinearLayout>
+
+    <!-- 游览顺序 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="游览顺序："
+            android:textStyle="bold"
+            android:layout_marginEnd="8dp"/>
+
+        <EditText
+            android:id="@+id/dialogVisitOrderEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:hint="输入顺序"/>
+    </LinearLayout>
+
+    <!-- 交通方式 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="交通方式："
+            android:textStyle="bold"
+            android:layout_marginEnd="8dp"/>
+
+        <EditText
+            android:id="@+id/dialogTransportEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="输入交通方式"/>
+    </LinearLayout>
+
+    <!-- 按钮区域 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/cancelButton"
+            android:id="@+id/dialogCancelButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="取消"
-            android:layout_marginEnd="8dp"
-            android:background="#DDDDDD"/>
+            android:layout_marginEnd="8dp"/>
 
         <Button
-            android:id="@+id/confirmButton"
+            android:id="@+id/dialogAddButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="确定"
-            android:textColor="@color/white"
-            android:background="@color/orange"/>
+            android:text="添加"
+            android:background="@color/blue"
+            android:textColor="@color/white"/>
     </LinearLayout>
 </LinearLayout> 

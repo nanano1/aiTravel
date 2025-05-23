@@ -146,7 +146,13 @@ public class POIRecommendationDialog extends Dialog {
         // 更新距离
         String distance = poi.getDistance();
         if (distance != null && !distance.isEmpty()) {
-            tvDistance.setText("距离: " + distance + "米");
+            // 将字符串转换为浮点数
+            double distanceInMeters = Double.parseDouble(distance);
+            // 转换为公里并保留一位小数
+            double distanceInKilometers = distanceInMeters / 1000;
+            // 格式化为一位小数
+            String formattedDistance = String.format("%.1f", distanceInKilometers);
+            tvDistance.setText("距离现有景点平均距离: " + formattedDistance + "公里");
         } else {
             tvDistance.setText("距离: 未知");
         }
