@@ -336,13 +336,15 @@ public class AIService {
     // 处理POI推荐的更新
     public boolean updateItineraryWithPOIRecommendation(long itineraryId, JSONObject recommendationData, DatabaseHelper dbHelper) {
         try {
-
+            // 获取替换的day和order
+            int day = recommendationData.optInt("day", 1);
+            int order = recommendationData.optInt("order", 1);
+            
             // 获取新景点信息
             String name = recommendationData.getString("name");
-            String uid=recommendationData.getString("uid");
+            String uid = recommendationData.getString("uid");
             double latitude = recommendationData.getDouble("lat");
             double longitude = recommendationData.getDouble("lng");
-
 
             // 获取其他信息，如果不存在则使用默认值
             String address = recommendationData.optString("address", "未知地址");
@@ -352,7 +354,6 @@ public class AIService {
             String businessArea = recommendationData.optString("business_area", "");
             String tel = recommendationData.optString("tel", "");
 
-
             // 打印调试信息
             Log.d(TAG, "更新行程景点 - " +
                     "名称: " + name + ", " +
@@ -361,7 +362,6 @@ public class AIService {
                     "类型: " + typeDesc);
 
             // 添加或获取景点
-            // 使用name作为poiId，因为POI可能没有明确的ID
             long siteId = dbHelper.addOrGetSite(uid, name, latitude, longitude, address,
                     "", tel, "", typeDesc, "");
 
@@ -369,6 +369,36 @@ public class AIService {
                 Log.e(TAG, "添加景点失败: " + name);
                 return false;
             }
+            
+            Log.d(TAG, "准备替换行程中的景点 - 天数: " + day + ", 顺序: " + order);
+            
+            // 检查是否存在需要替换的景点
+            boolean hasAttraction = dbHelper.hasAttractionForDayAndOrder(itineraryId, day, order);
+            
+            if (hasAttraction) {
+                // 如果存在，直接更新现有记录的site_id
+                Log.d(TAG, "更新现有景点记录的site_id");
+                boolean updateSuccess = dbHelper.updateAttractionSiteId(itineraryId, day, order, siteId, name, typeDesc);
+                
+                if (!updateSuccess) {
+                    Log.e(TAG, "更新景点site_id失败: " + name);
+                    return false;
+                }
+            } else {
+                // 如果不存在，创建新的记录
+                Log.d(TAG, "创建新的景点记录");
+                ItineraryAttraction newAttraction = new ItineraryAttraction(
+                        itineraryId, siteId, day, order, name, "步行");
+                newAttraction.setType(recommendationData.optString("type", "景点").contains("餐") ? "餐厅" : "景点");
+                
+                long result = dbHelper.addAttraction(newAttraction);
+                if (result <= 0) {
+                    Log.e(TAG, "添加景点到行程失败: " + name);
+                    return false;
+                }
+            }
+            
+            Log.d(TAG, "成功更新行程景点: " + name);
             return true;
 
         } catch (Exception e) {

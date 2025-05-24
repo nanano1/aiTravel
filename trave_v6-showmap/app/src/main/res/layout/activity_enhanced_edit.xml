@@ -6,6 +6,7 @@
     android:layout_height="match_parent">
 
     <LinearLayout
+        android:id="@+id/mainLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
@@ -48,7 +49,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="拖动左侧手柄可调整景点顺序，点击删除按钮可移除景点"
+            android:text="点击天数展开/折叠，拖动左侧手柄调整景点顺序，点击删除按钮可移除景点"
             android:textStyle="italic"
             android:textSize="14dp"
             android:layout_marginTop="8dp"
@@ -62,18 +63,38 @@
             android:layout_weight="1"
             android:orientation="vertical" />
 
-        <!-- 添加景点按钮 -->
-        <Button
-            android:id="@+id/addAttractionBtn"
+        <!-- 添加景点和添加天数按钮 -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="添加新景点"
-            android:textStyle="bold"
-            android:textSize="18dp"
-            android:textColor="@color/white"
-            android:background="@color/blue"
+            android:orientation="horizontal"
             android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/addAttractionBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="添加新景点"
+                android:textStyle="bold"
+                android:textSize="16dp"
+                android:textColor="@color/white"
+                android:background="@color/blue"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/addDayBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="添加新的一天"
+                android:textStyle="bold"
+                android:textSize="16dp"
+                android:textColor="@color/white"
+                android:background="@color/blue"
+                android:layout_marginStart="4dp"/>
+        </LinearLayout>
 
         <!-- 保存按钮 -->
         <Button

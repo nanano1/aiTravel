@@ -6,6 +6,7 @@ from agent.subgraphs.attraction import create_attraction_graph
 from agent.app_context import AppContext
 from agent.subgraphs.restaurant import create_restaurant_graph
 from agent.subgraphs.schedule_adjustment import create_schedule_adjustment_graph_test  # 导入整体调整子图的创建函数
+from agent.subgraphs.poi_replacement import create_poi_replacement_graph  # 导入POI替换子图的创建函数
 
 
 def create_main_graph():
@@ -27,6 +28,10 @@ def create_main_graph():
     schedule_adjustment_graph = create_schedule_adjustment_graph_test()
     graph.add_node("schedule_adjustment_flow", schedule_adjustment_graph)
 
+    # 添加替换景点子图
+    poi_replacement_graph = create_poi_replacement_graph()
+    graph.add_node("poi_replacement_flow", poi_replacement_graph)
+
     print("设置边：定义节点之间的连接关系...")
     graph.add_edge(START, "router")
     
@@ -39,6 +44,7 @@ def create_main_graph():
     graph.add_edge("attraction_flow", END)
     graph.add_edge("restaurant_flow", END)
     graph.add_edge("schedule_adjustment_flow", END)
+    graph.add_edge("poi_replacement_flow", END)  # 添加POI替换子图到END的边
     graph.add_edge("general_qa", END)  # 添加通用问答节点到END的边
 
     print("设置条件边：根据是否完成决定是结束还是继续...")
@@ -65,6 +71,9 @@ def routing_function(state: TripState) -> str:
     elif state["flow_state"]["active_flow"] == "整体调整":
         print("路由到整体调整子图")
         return "schedule_adjustment_flow"
+    elif state["flow_state"]["active_flow"] == "POI替换":
+        print("路由到POI替换子图")
+        return "poi_replacement_flow"
     elif state["flow_state"]["active_flow"] == "general_qa":
         print("路由到 general_qa")
         return "general_qa"

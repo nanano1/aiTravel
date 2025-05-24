@@ -42,12 +42,14 @@
                     android:text="景点名称："
                     android:textStyle="bold" />
 
-                <EditText
+                <AutoCompleteTextView
                     android:id="@+id/attractionNameEditText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@android:color/transparent"
-                    android:hint="输入景点名称" />
+                    android:hint="输入景点名称"
+                    android:completionThreshold="1"
+                    android:inputType="text" />
             </LinearLayout>
 
             <!-- 第几天 -->

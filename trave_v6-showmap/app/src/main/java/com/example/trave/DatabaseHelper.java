@@ -627,6 +627,102 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return rowsAffected > 0; // 返回是否成功更新数据
     }
 
+    // 更新行程的天数
+    public boolean updateItineraryDays(long itineraryId, int days) {
+        if (itineraryId <= 0) {
+            Log.e(TAG, "updateItineraryDays: 无效的itineraryId: " + itineraryId);
+            return false;
+        }
+        
+        if (days <= 0) {
+            days = 1; // 确保至少为1天
+            Log.w(TAG, "天数小于等于0，设置为默认值1");
+        }
+        
+        Log.d(TAG, "开始更新行程ID: " + itineraryId + " 的天数为: " + days);
+        
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_ITINERARY_DAYS, days);
+        
+        String whereClause = COLUMN_ITINERARY_ID + "=?";
+        String[] whereArgs = {String.valueOf(itineraryId)};
+
+        try {
+            int rowsAffected = db.update(TABLE_ITINERARIES, values, whereClause, whereArgs);
+            Log.d(TAG, "更新行程天数结果: 影响行数=" + rowsAffected);
+            db.close();
+            return rowsAffected > 0;
+        } catch (Exception e) {
+            Log.e(TAG, "更新行程天数失败: " + e.getMessage());
+            e.printStackTrace();
+            db.close();
+            return false;
+        }
+    }
+
+    // 根据行程中的景点自动计算并更新天数
+    public boolean updateItineraryDaysFromAttractions(long itineraryId) {
+        if (itineraryId <= 0) {
+            Log.e(TAG, "updateItineraryDaysFromAttractions: 无效的itineraryId: " + itineraryId);
+            return false;
+        }
+        
+        SQLiteDatabase db = this.getReadableDatabase();
+        
+        Log.d(TAG, "开始计算行程ID: " + itineraryId + " 的天数");
+        
+        // 查询当前行程中景点的最大天数
+        String query = "SELECT MAX(" + COLUMN_ATTRACTION_DAY_NUMBER + ") FROM " + TABLE_ATTRACTIONS + 
+                      " WHERE " + COLUMN_ATTRACTION_ITINERARY_ID + "=?";
+        String[] selectionArgs = {String.valueOf(itineraryId)};
+        
+        try {
+            Cursor cursor = db.rawQuery(query, selectionArgs);
+            int maxDays = 1; // 默认至少1天
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                maxDays = cursor.getInt(0);
+                Log.d(TAG, "查询到的最大天数: " + maxDays);
+                if (maxDays <= 0) {
+                    maxDays = 1; // 确保至少为1天
+                    Log.d(TAG, "最大天数小于等于0，设置为默认值1");
+                }
+                cursor.close();
+            } else {
+                Log.w(TAG, "未找到行程景点或查询结果为空");
+            }
+            
+            db.close();
+            
+            // 获取当前行程的天数
+            Itinerary itinerary = getItineraryById(itineraryId);
+            if (itinerary != null) {
+                int currentDays = itinerary.getDays();
+                Log.d(TAG, "当前行程天数: " + currentDays + ", 计算得到的天数: " + maxDays);
+                
+                if (currentDays != maxDays) {
+                    // 只有当天数不同时才更新
+                    boolean result = updateItineraryDays(itineraryId, maxDays);
+                    Log.d(TAG, "更新行程天数结果: " + (result ? "成功" : "失败"));
+                    return result;
+                } else {
+                    Log.d(TAG, "当前天数与计算天数相同，无需更新");
+                    return true;
+                }
+            } else {
+                Log.e(TAG, "无法获取行程信息，itineraryId: " + itineraryId);
+                return false;
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "计算行程天数失败: " + e.getMessage());
+            e.printStackTrace();
+            db.close();
+            return false;
+        }
+    }
+
     public Sites getSiteBySiteId(long siteId, SQLiteDatabase db) {
         String selection = COLUMN_SITE_ID + "=?";
         String[] selectionArgs = {String.valueOf(siteId)};
@@ -719,6 +815,59 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.update(TABLE_ATTRACTIONS, values,
                 COLUMN_ATTRACTION_ID + " = ?",
                 new String[]{String.valueOf(attractionId)}) > 0;
+    }
+
+    // 检查指定行程的特定天数和顺序是否存在景点
+    public boolean hasAttractionForDayAndOrder(long itineraryId, int dayNumber, int visitOrder) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String selection = COLUMN_ATTRACTION_ITINERARY_ID + "=? AND " +
+                COLUMN_ATTRACTION_DAY_NUMBER + "=? AND " +
+                COLUMN_ATTRACTION_VISIT_ORDER + "=?";
+        String[] selectionArgs = {
+                String.valueOf(itineraryId),
+                String.valueOf(dayNumber),
+                String.valueOf(visitOrder)
+        };
+        
+        Cursor cursor = db.query(TABLE_ATTRACTIONS, new String[]{COLUMN_ATTRACTION_ID}, 
+                selection, selectionArgs, null, null, null);
+        
+        boolean exists = cursor != null && cursor.getCount() > 0;
+        
+        if (cursor != null) {
+            cursor.close();
+        }
+        db.close();
+        
+        return exists;
+    }
+
+    // 更新指定行程特定天数和顺序景点的site_id和相关信息
+    public boolean updateAttractionSiteId(long itineraryId, int dayNumber, int visitOrder, 
+                                         long newSiteId, String newName, String newType) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        
+        values.put(COLUMN_ITINERARY_SITE_ID, newSiteId);
+        values.put(COLUMN_ATTRACTION_NAME, newName);
+        
+        // 根据type_desc判断景点类型
+        String attractionType = determineAttractionType(newType);
+        values.put(COLUMN_ATTRACTION_TYPE, attractionType);
+        
+        String whereClause = COLUMN_ATTRACTION_ITINERARY_ID + "=? AND " +
+                COLUMN_ATTRACTION_DAY_NUMBER + "=? AND " +
+                COLUMN_ATTRACTION_VISIT_ORDER + "=?";
+        String[] whereArgs = {
+                String.valueOf(itineraryId),
+                String.valueOf(dayNumber),
+                String.valueOf(visitOrder)
+        };
+        
+        int rowsAffected = db.update(TABLE_ATTRACTIONS, values, whereClause, whereArgs);
+        db.close();
+        
+        return rowsAffected > 0;
     }
 }
 

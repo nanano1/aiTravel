@@ -37,6 +37,19 @@ class AttractionFlow:
         self.current_recommendations = []
         self.retry_count = 0
 
+# 新增POI替换流程类
+class PoiReplaceFlow:
+    def __init__(self):
+        self.replace_poi_info: Optional[Dict[str, Any]] = None
+        self.current_recommendations: List[Dict] = []
+        self.selected_replacement: Optional[Dict[str, Any]] = None
+
+    def reset(self):
+        """重置 PoiReplaceFlow 的所有属性"""
+        self.replace_poi_info = None
+        self.current_recommendations = []
+        self.selected_replacement = None
+
 class TripContextManager:
     def __init__(self, itinerary_data: dict):
         self.conversation_history = []
@@ -45,6 +58,7 @@ class TripContextManager:
         self.current_city: Optional[str] = None
         self.attraction_flow = AttractionFlow()  # 新增属性：景点流
         self.schedule_adjustment_flow = ScheduleAdjustmentFlow()  # 新增属性：行程调整流
+        self.poi_replace_flow = PoiReplaceFlow()  # 新增属性：POI替换流
         
         # 安全地设置当前行程ID，防止空列表导致IndexError
         if self.itinerary_data and len(self.itinerary_data) > 0:
@@ -107,7 +121,8 @@ class TripContextManager:
             "current_trip": self.get_current_trip(),
             "preferences": self.attraction_flow.user_preferences,
             "current_city": self.current_city,
-            "target_poi": self.attraction_flow.target_poi
+            "target_poi": self.attraction_flow.target_poi,
+            "replace_poi_info": self.poi_replace_flow.replace_poi_info
         }
         
     def summary(self) -> str:
@@ -116,6 +131,8 @@ class TripContextManager:
         summary_text += f" - 用户偏好: {self.attraction_flow.user_preferences if self.attraction_flow.user_preferences else '无'}\n"
         summary_text += f" - 当前城市: {self.current_city}\n"
         summary_text += f" - 当前更改中的景点: {self.attraction_flow.target_poi}\n"
+        if self.poi_replace_flow.replace_poi_info:
+            summary_text += f" - 当前替换景点信息: {self.poi_replace_flow.replace_poi_info.get('target_poi', {}).get('name', '无')}\n"
         return summary_text
 
     # === 历史消息管理 ===
@@ -137,11 +154,17 @@ class TripContextManager:
     # === 当前推荐列表管理 ===
     def update_recommendations(self, recommendations: List[dict]):
         """更新当前推荐列表"""
-        self.attraction_flow.current_recommendations = recommendations
+        # 根据当前活跃的流程确定更新哪个推荐列表
+        if self.poi_replace_flow.replace_poi_info:
+            self.poi_replace_flow.current_recommendations = recommendations
+        else:
+            self.attraction_flow.current_recommendations = recommendations
         return self.summary()
 
     def get_recommendations(self) -> List[dict]:
-        """获取当前推荐列表"""
+        """获取当前推荐列表，优先返回POI替换流程的推荐"""
+        if self.poi_replace_flow.replace_poi_info and self.poi_replace_flow.current_recommendations:
+            return self.poi_replace_flow.current_recommendations
         return self.attraction_flow.current_recommendations
     
     # === 当前城市管理 ===
@@ -155,6 +178,29 @@ class TripContextManager:
     def reset_attraction_flow(self):
         """重置 AttractionFlow"""
         self.attraction_flow.reset()
+
+    # === POI替换流程管理 ===
+    def update_poi_replace_info(self, replace_poi_info: Dict[str, Any]):
+        """更新POI替换信息"""
+        self.poi_replace_flow.replace_poi_info = replace_poi_info
+        return self.poi_replace_flow.replace_poi_info
+    
+    def get_poi_replace_info(self) -> Optional[Dict[str, Any]]:
+        """获取POI替换信息"""
+        return self.poi_replace_flow.replace_poi_info
+    
+    def update_poi_replacement(self, replacement: Dict[str, Any]):
+        """更新选定的替换POI"""
+        self.poi_replace_flow.selected_replacement = replacement
+        return self.summary()
+    
+    def get_poi_replacement(self) -> Optional[Dict[str, Any]]:
+        """获取选定的替换POI"""
+        return self.poi_replace_flow.selected_replacement
+    
+    def reset_poi_replace_flow(self):
+        """重置POI替换流程"""
+        self.poi_replace_flow.reset()
 
     # === 行程调整管理 ===
     def reset_schedule_adjustment_flow(self):

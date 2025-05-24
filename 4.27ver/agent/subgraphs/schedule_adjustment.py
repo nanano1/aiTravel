@@ -753,7 +753,7 @@ def optimize_route_node(state: TripState) -> TripState:
     # 获取总天数
     total_days = state["flow_state"]["target_days"]
     pois_per_day = state["flow_state"]["daily_limit"]
-
+    print(f"total_days: {total_days}, pois_per_day: {pois_per_day}")
     
     try:
         # 1. 使用KMeans进行聚类，限制每天POI数量

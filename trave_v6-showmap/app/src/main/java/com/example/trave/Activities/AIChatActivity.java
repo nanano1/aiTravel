@@ -297,6 +297,9 @@ public class AIChatActivity extends AppCompatActivity implements
                     case "poi_recommendations":
                         handlePOIRecommendations(structuredData);
                         break;
+                    case "poi_replace":
+                        handlePOIReplacement(structuredData);
+                        break;
                     case "itinerary_update":
                         handleItineraryUpdate(structuredData);
                         break;
@@ -590,23 +593,7 @@ public class AIChatActivity extends AppCompatActivity implements
                         ArrayList<ItineraryAttraction> updatedAttractions = 
                             dbHelper.getItineraryAttractions(itineraryId);
                         
-                        for (ItineraryAttraction attraction : updatedAttractions) {
-                            if (attraction.getAttractionName().equals(restaurant.getName())) {
-                                // 更新为AI推荐并添加推荐理由
-                                dbHelper.updateAttractionAiRecommended(
-                                    attraction.getId(), 
-                                    true, 
-                                    restaurant.getReason()
-                                );
-                                
-                                // 通知适配器更新UI
-                                mainHandler.post(() -> {
-                                    itineraryDetailAdapter.markAsAiRecommended(attraction.getId());
-                                });
-                                
-                                break;
-                            }
-                        }
+                        
                     } catch (Exception e) {
                         Log.e(TAG, "保存AI推荐记录失败", e);
                     }
@@ -733,28 +720,9 @@ public class AIChatActivity extends AppCompatActivity implements
                                 try {
                                     // 延迟一下等待数据库刷新
                                     Thread.sleep(500);
-                                    
                                     // 获取新添加的景点ID
                                     ArrayList<ItineraryAttraction> updatedAttractions = 
                                         dbHelper.getItineraryAttractions(itineraryId);
-                                    
-                                    for (ItineraryAttraction attraction : updatedAttractions) {
-                                        if (attraction.getAttractionName().equals(poi.getName())) {
-                                            // 更新为AI推荐并添加推荐理由
-                                            dbHelper.updateAttractionAiRecommended(
-                                                attraction.getId(), 
-                                                true, 
-                                                poi.getRecommendationReason()
-                                            );
-                                            
-                                            // 通知适配器更新UI
-                                            mainHandler.post(() -> {
-                                                itineraryDetailAdapter.markAsAiRecommended(attraction.getId());
-                                            });
-                                            
-                                            break;
-                                        }
-                                    }
                                 } catch (Exception e) {
                                     Log.e(TAG, "保存AI推荐记录失败", e);
                                 }
@@ -827,5 +795,115 @@ public class AIChatActivity extends AppCompatActivity implements
     protected void onDestroy() {
         super.onDestroy();
         executorService.shutdown();
+    }
+
+    private void handlePOIReplacement(JSONObject data) throws JSONException {
+        // 获取推荐列表
+        JSONArray recommendations = data.getJSONArray("recommendations");
+        List<RecommendedPOI> items = new ArrayList<>();
+        
+        // 获取替换POI的信息
+        JSONObject replaceInfo = data.getJSONObject("replace_poi_info");
+        JSONObject targetPoi = replaceInfo.getJSONObject("target_poi");
+        
+        // 预先提取目标POI的名称，避免在匿名类中处理异常
+        final String targetPoiName = targetPoi.getString("name");
+        
+        // 处理推荐数据
+        for (int i = 0; i < recommendations.length(); i++) {
+            JSONObject rec = recommendations.getJSONObject(i);
+            // 确保每个推荐都包含day和order信息(与被替换景点相同)
+            if (!rec.has("day") || !rec.has("order")) {
+                int day = targetPoi.getInt("day");
+                int order = targetPoi.getInt("order");
+                rec.put("day", day);
+                rec.put("order", order);
+            }
+            items.add(new RecommendedPOI(rec));
+        }
+
+        // 使用POI替换对话框
+        POIReplaceDialog dialog = new POIReplaceDialog(this, items, new POIReplaceDialog.POIReplaceListener() {
+            @Override
+            public void onPOISelected(RecommendedPOI selectedPOI) {
+                // 处理用户选择的替换POI
+                processReplacementSelection(selectedPOI, targetPoiName);
+            }
+
+            @Override
+            public void onRefreshRequest() {
+                // 处理"换一批"请求
+                String refreshMessage = "请告诉我您的更多偏好，例如：\n"
+                        + "- 想去更文艺的地方\n"
+                        + "- 有适合小孩子的景点吗\n"
+                        + "- 想去人少一点的地方\n"
+                        + "- 想找评分高于4.5的景点\n\n"
+                        + "这样我可以为您提供更符合需求的推荐。";
+                addMessage(refreshMessage, false);
+            }
+        });
+
+        dialog.show();
+        
+        Log.d(TAG, "已显示POI替换对话框，数量: " + items.size());
+    }
+
+    private void processReplacementSelection(RecommendedPOI selectedPOI, String originalName) {
+        executorService.execute(() -> {
+            try {
+                // 获取POI的原始JSON数据
+                JSONObject poiData = selectedPOI.getOriginalData();
+                if (poiData != null) {
+                    // 获取day和order字段
+                    int day = poiData.optInt("day", 1);
+                    int order = poiData.optInt("order", 1);
+                    Log.d(TAG, "替换POI - 将替换day: " + day + ", order: " + order + "的景点");
+                    
+                    // 更新到行程中
+                    boolean success = aiService.updateItineraryWithPOIRecommendation(
+                        itineraryId, 
+                        poiData,
+                        dbHelper
+                    );
+
+                    mainHandler.post(() -> {
+                        if (success) {
+                            // 重新加载行程数据
+                            loadItineraryData();
+                            
+                            // 添加一条AI消息，确认替换
+                            String aiMessage = String.format(
+                                "已将第%d天的「%s」替换为「%s」✓",
+                                day,
+                                originalName,
+                                selectedPOI.getName()
+                            );
+                            addMessage(aiMessage, false);
+                            
+                            // 向AI发送确认选择的消息
+                            sendMessage("我已选择替换为" + selectedPOI.getName());
+                        } else {
+                            Toast.makeText(this, "替换景点失败，请重试", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    mainHandler.post(() -> 
+                        Toast.makeText(this, "替换景点失败: 缺少景点数据", Toast.LENGTH_SHORT).show()
+                    );
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    Log.e(TAG, "替换景点失败", e);
+                    Toast.makeText(this, "替换景点失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 页面返回时重新加载行程数据，确保显示最新的数据
+        loadItineraryData();
     }
 } 

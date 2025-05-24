@@ -22,7 +22,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -35,28 +34,29 @@ import com.amap.api.services.help.Tip;
 import com.amap.api.services.poisearch.Photo;
 import com.amap.api.services.poisearch.PoiResult;
 import com.amap.api.services.poisearch.PoiSearch;
-import com.example.trave.Adapters.EnhancedEditAdapter;
+import com.example.trave.Adapters.CollapsibleDayAdapter;
 import com.example.trave.DatabaseHelper;
 import com.example.trave.Domains.ItineraryAttraction;
 import com.example.trave.R;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class EnhancedEditActivity extends AppCompatActivity implements EnhancedEditAdapter.OnStartDragListener, Inputtips.InputtipsListener, PoiSearch.OnPoiSearchListener {
+public class EnhancedEditActivity extends AppCompatActivity implements Inputtips.InputtipsListener, PoiSearch.OnPoiSearchListener, CollapsibleDayAdapter.OnDayItemClickListener {
 
     private static final String TAG = "EnhancedEditActivity";
     private TextView itineraryNameText;
     private TextView itineraryLocationText;
     private Button saveEditBtn;
     private Button addAttractionBtn;
+    private Button addDayBtn;
     private RecyclerView attractionsRecyclerView;
 
     private ArrayList<ItineraryAttraction> itineraryAttractionList = new ArrayList<>();
     private Long itineraryId;
-    private EnhancedEditAdapter enhancedEditAdapter;
-    private ItemTouchHelper itemTouchHelper;
+    private CollapsibleDayAdapter collapsibleDayAdapter;
     private DatabaseHelper dbHelper;
     
     // POI搜索相关
@@ -76,6 +76,7 @@ public class EnhancedEditActivity extends AppCompatActivity implements EnhancedE
     private String photos;
     private Dialog attractionDialog;
     private String itineraryLocation;
+    private int selectedDayNumber = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,35 +111,17 @@ public class EnhancedEditActivity extends AppCompatActivity implements EnhancedE
         itineraryLocationText = findViewById(R.id.itineraryLocationText);
         saveEditBtn = findViewById(R.id.saveEditBtn);
         addAttractionBtn = findViewById(R.id.addAttractionBtn);
+        addDayBtn = findViewById(R.id.addDayBtn);
         attractionsRecyclerView = findViewById(R.id.attractionsRecyclerView);
     }
 
     private void setupRecyclerView() {
-        enhancedEditAdapter = new EnhancedEditAdapter(itineraryAttractionList);
-        enhancedEditAdapter.setOnStartDragListener(this);
+        collapsibleDayAdapter = new CollapsibleDayAdapter(itineraryAttractionList, itineraryLocation);
+        collapsibleDayAdapter.setOnDayItemClickListener(this);
+        collapsibleDayAdapter.setDatabaseHelper(dbHelper);
+        collapsibleDayAdapter.setItineraryId(itineraryId);
         attractionsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        attractionsRecyclerView.setAdapter(enhancedEditAdapter);
-        
-        // 设置ItemTouchHelper实现拖拽功能
-        ItemTouchHelper.Callback callback = new ItemTouchHelper.SimpleCallback(
-                ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
-            
-            @Override
-            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder source, RecyclerView.ViewHolder target) {
-                int fromPosition = source.getAdapterPosition();
-                int toPosition = target.getAdapterPosition();
-                enhancedEditAdapter.moveItem(fromPosition, toPosition);
-                return true;
-            }
-            
-            @Override
-            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-                // 不实现滑动删除功能
-            }
-        };
-        
-        itemTouchHelper = new ItemTouchHelper(callback);
-        itemTouchHelper.attachToRecyclerView(attractionsRecyclerView);
+        attractionsRecyclerView.setAdapter(collapsibleDayAdapter);
     }
 
     private void setupButtonListeners() {
@@ -146,7 +129,6 @@ public class EnhancedEditActivity extends AppCompatActivity implements EnhancedE
         saveEditBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                updateAttractions();
                 saveItinerary();
             }
         });
@@ -158,29 +140,42 @@ public class EnhancedEditActivity extends AppCompatActivity implements EnhancedE
                 showAddAttractionDialog();
             }
         });
+        
+        // 添加新的一天按钮点击事件
+        addDayBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                collapsibleDayAdapter.addNewDay();
+                Toast.makeText(EnhancedEditActivity.this, "已添加新的一天", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void showAddAttractionDialog() {
         // 创建对话框
-        attractionDialog = new Dialog(this);
-        attractionDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        attractionDialog.setContentView(R.layout.dialog_add_attraction_search);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_attraction, null);
+        builder.setView(dialogView);
         
-        // 初始化对话框中的UI元素
-        searchAttractionEditText = attractionDialog.findViewById(R.id.searchAttractionEditText);
-        Button cancelButton = attractionDialog.findViewById(R.id.cancelButton);
-        Button confirmButton = attractionDialog.findViewById(R.id.confirmButton);
+        // 获取对话框中的视图
+        final AutoCompleteTextView nameEditText = dialogView.findViewById(R.id.dialogAttractionNameEditText);
+        final EditText dayNumberEditText = dialogView.findViewById(R.id.dialogDayNumberEditText);
+        final EditText transportEditText = dialogView.findViewById(R.id.dialogTransportEditText);
+        Button cancelButton = dialogView.findViewById(R.id.dialogCancelButton);
+        Button addButton = dialogView.findViewById(R.id.dialogAddButton);
         
-        // 确保searchAttractionEditText不为null
-        if (searchAttractionEditText == null) {
-            Log.e(TAG, "searchAttractionEditText is null! Dialog layout may be incorrect.");
-            Toast.makeText(this, "初始化对话框失败", Toast.LENGTH_SHORT).show();
-            attractionDialog.dismiss();
-            return;
+        // 隐藏游览顺序输入框，因为我们使用拖拽排序
+        EditText visitOrderEditText = dialogView.findViewById(R.id.dialogVisitOrderEditText);
+        if (visitOrderEditText != null) {
+            ViewGroup parent = (ViewGroup) visitOrderEditText.getParent();
+            if (parent != null) {
+                parent.setVisibility(View.GONE);
+            }
         }
         
         // 设置景点搜索的监听器
-        searchAttractionEditText.addTextChangedListener(new TextWatcher() {
+        this.searchAttractionEditText = nameEditText;
+        nameEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
@@ -208,25 +203,122 @@ public class EnhancedEditActivity extends AppCompatActivity implements EnhancedE
         });
         
         // 设置景点选择监听器
-        searchAttractionEditText.setOnItemClickListener((parent, view, position, id) -> {
+        nameEditText.setOnItemClickListener((parent, view, position, id) -> {
             selectedPoi = tipList.get(position).getPoiID();
             Log.d(TAG, "Selected POI ID: " + selectedPoi);
             performPoiIdSearch(selectedPoi);
         });
         
-        // 设置按钮点击事件
-        cancelButton.setOnClickListener(v -> attractionDialog.dismiss());
+        // 默认填入当前最大天数
+        int maxDay = 1;
+        for (ItineraryAttraction attraction : itineraryAttractionList) {
+            if (attraction.getDayNumber() > maxDay) {
+                maxDay = attraction.getDayNumber();
+            }
+        }
+        dayNumberEditText.setText(String.valueOf(maxDay));
+        selectedDayNumber = maxDay;
         
-        confirmButton.setOnClickListener(v -> {
-            if (selectedPoi != null && !selectedPoi.isEmpty() && attractionName != null && !attractionName.isEmpty()) {
-                addNewAttraction();
-                attractionDialog.dismiss();
-            } else {
-                Toast.makeText(EnhancedEditActivity.this, "请选择一个景点", Toast.LENGTH_SHORT).show();
+        // 创建对话框
+        final AlertDialog dialog = builder.create();
+        
+        // 设置按钮点击事件
+        cancelButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
             }
         });
         
-        attractionDialog.show();
+        addButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 获取输入的数据
+                String name = nameEditText.getText().toString().trim();
+                String dayNumberStr = dayNumberEditText.getText().toString().trim();
+                String transport = transportEditText.getText().toString().trim();
+                
+                // 验证输入
+                if (name.isEmpty() || dayNumberStr.isEmpty() || transport.isEmpty()) {
+                    Toast.makeText(EnhancedEditActivity.this, "请填写所有字段", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                
+                try {
+                    int dayNumber = Integer.parseInt(dayNumberStr);
+                    selectedDayNumber = dayNumber;
+                    
+                    // 创建新的景点对象
+                    ItineraryAttraction newAttraction;
+                    
+                    if (selectedPoi != null && !selectedPoi.isEmpty()) {
+                        // 如果使用了POI搜索
+                        long siteId = dbHelper.addOrGetSite(
+                                selectedPoi,
+                                attractionName != null ? attractionName : name,
+                                latitude,
+                                longitude,
+                                address,
+                                businessArea,
+                                tel,
+                                website,
+                                typeDesc,
+                                photos
+                        );
+                        
+                        newAttraction = new ItineraryAttraction(
+                                itineraryId,
+                                siteId,
+                                dayNumber,
+                                1, // 默认顺序，会在适配器中更新
+                                attractionName != null ? attractionName : name,
+                                transport
+                        );
+                    } else {
+                        // 如果直接输入了景点名称
+                        newAttraction = new ItineraryAttraction(
+                                dayNumber,
+                                1, // 默认顺序，会在适配器中更新
+                                name,
+                                transport
+                        );
+                        
+                        // 设置行程ID
+                        newAttraction.setItineraryId(itineraryId);
+                        // 设置景点ID，使用默认值1
+                        newAttraction.setSiteId(1);
+                    }
+                    
+                    // 添加到适配器
+                    collapsibleDayAdapter.addAttraction(newAttraction);
+                    
+                    // 保存景点到数据库
+                    long attractionId = dbHelper.addAttraction(newAttraction);
+                    if (attractionId > 0) {
+                        newAttraction.setId(attractionId);
+                        Log.d(TAG, "新增景点保存成功: " + newAttraction.getAttractionName() + ", ID: " + attractionId);
+                        
+                        // 更新数据库中的行程天数
+                        boolean updated = dbHelper.updateItineraryDaysFromAttractions(itineraryId);
+                        Log.d(TAG, "添加景点后更新天数: " + (updated ? "成功" : "失败"));
+                    } else {
+                        Log.e(TAG, "新增景点保存失败: " + newAttraction.getAttractionName());
+                    }
+                    
+                    // 关闭对话框
+                    dialog.dismiss();
+                    
+                    // 提示用户
+                    Toast.makeText(EnhancedEditActivity.this, "景点已添加", Toast.LENGTH_SHORT).show();
+                    
+                } catch (NumberFormatException e) {
+                    Toast.makeText(EnhancedEditActivity.this, "天数必须是数字", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        
+        // 显示对话框
+        dialog.show();
     }
     
     /**
@@ -246,96 +338,52 @@ public class EnhancedEditActivity extends AppCompatActivity implements EnhancedE
             e.printStackTrace();
         }
     }
-    
-    /**
-     * 添加新景点
-     */
-    private void addNewAttraction() {
-        // 获取最大天数
-        int maxDay = 1;
-        for (ItineraryAttraction attraction : itineraryAttractionList) {
-            if (attraction.getDayNumber() > maxDay) {
-                maxDay = attraction.getDayNumber();
-            }
-        }
-        
-        // 创建新的景点对象
-        ItineraryAttraction newAttraction = new ItineraryAttraction(
-                itineraryId,
-                0, // 临时siteId，后面会更新
-                maxDay,
-                itineraryAttractionList.size() + 1,
-                attractionName,
-                "步行"
-        );
-        
-        // 保存或获取景点基本信息
-        long siteId = dbHelper.addOrGetSite(
-                selectedPoi,
-                attractionName,
-                latitude,
-                longitude,
-                address,
-                businessArea,
-                tel,
-                website,
-                typeDesc,
-                photos
-        );
-        
-        // 更新siteId
-        newAttraction.setSiteId(siteId);
-        
-        // 添加到列表
-        enhancedEditAdapter.addAttraction(newAttraction);
-        
-        // 提示用户
-        Toast.makeText(this, "景点已添加: " + attractionName, Toast.LENGTH_SHORT).show();
-        
-        // 重置选择
-        selectedPoi = null;
-        attractionName = null;
-    }
-
-    private void updateAttractions() {
-        // 遍历RecyclerView中的所有项，更新数据
-        for (int i = 0; i < attractionsRecyclerView.getChildCount(); i++) {
-            View itemView = attractionsRecyclerView.getChildAt(i);
-            EnhancedEditAdapter.EnhancedEditViewHolder holder = 
-                    (EnhancedEditAdapter.EnhancedEditViewHolder) attractionsRecyclerView.getChildViewHolder(itemView);
-            
-            if (i < itineraryAttractionList.size()) {
-                ItineraryAttraction attraction = itineraryAttractionList.get(i);
-                
-                attraction.setAttractionName(holder.attractionNameEditText.getText().toString());
-                attraction.setTransport(holder.transportEditText.getText().toString());
-                
-                try {
-                    attraction.setDayNumber(Integer.parseInt(holder.dayNumberEditText.getText().toString()));
-                } catch (NumberFormatException e) {
-                    attraction.setDayNumber(1);
-                }
-                
-                // 设置访问顺序为位置+1
-                attraction.setVisitOrder(i + 1);
-            }
-        }
-    }
 
     private void saveItinerary() {
         String itineraryName = itineraryNameText.getText().toString();
 
-        if (itineraryName.isEmpty() || itineraryAttractionList.isEmpty()) {
-            Toast.makeText(this, "请输入行程名称并至少添加一个景点", Toast.LENGTH_SHORT).show();
+        if (itineraryName.isEmpty()) {
+            Toast.makeText(this, "请输入行程名称", Toast.LENGTH_SHORT).show();
             return;
         }
         
-        // 确保每个景点都有合法的 siteId
-        for (ItineraryAttraction attraction : itineraryAttractionList) {
+        // 获取所有景点
+        List<ItineraryAttraction> allAttractions = collapsibleDayAdapter.getAllAttractions();
+        
+        if (allAttractions.isEmpty()) {
+            Toast.makeText(this, "请至少添加一个景点", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 首先删除原有的景点数据，避免数据冲突
+        dbHelper.deleteAttractionsForItinerary(itineraryId);
+        Log.d(TAG, "已删除行程原有景点数据");
+        
+        // 确保每个景点都有合法的 siteId 并保存到数据库
+        for (ItineraryAttraction attraction : allAttractions) {
             if (attraction.getSiteId() <= 0) {
-                // 如果没有 siteId，设置一个默认值
-                attraction.setSiteId(1); // 使用默认值1，实际应用中可能需要不同的处理方式
+                attraction.setSiteId(1); // 使用默认值1
             }
+            
+            // 确保景点有正确的行程ID
+            attraction.setItineraryId(itineraryId);
+            
+            // 保存景点到数据库
+            long attractionId = dbHelper.addAttraction(attraction);
+            if (attractionId > 0) {
+                attraction.setId(attractionId);
+                Log.d(TAG, "保存景点: " + attraction.getAttractionName() + ", ID: " + attractionId);
+            } else {
+                Log.e(TAG, "保存景点失败: " + attraction.getAttractionName());
+            }
+        }
+        
+        // 现在数据库中的景点数据已经是最新的，可以正确计算天数
+        boolean daysUpdated = dbHelper.updateItineraryDaysFromAttractions(itineraryId);
+        if (daysUpdated) {
+            Log.d(TAG, "行程天数已自动更新");
+        } else {
+            Log.w(TAG, "行程天数更新失败");
         }
         
         Intent resultIntent = new Intent();
@@ -343,18 +391,13 @@ public class EnhancedEditActivity extends AppCompatActivity implements EnhancedE
         Log.d(TAG, "ResultitineraryId " + itineraryId);
 
         resultIntent.putExtra("itineraryTittle", itineraryName);
-        resultIntent.putParcelableArrayListExtra("itineraryAttractions", itineraryAttractionList);
+        resultIntent.putParcelableArrayListExtra("itineraryAttractions", new ArrayList<>(allAttractions));
 
         Log.d(TAG, "Returning Itinerary ID: " + itineraryId);
-        Log.d(TAG, "Returning Attractions: " + itineraryAttractionList.size());
+        Log.d(TAG, "Returning Attractions: " + allAttractions.size());
 
         setResult(RESULT_OK, resultIntent);
         finish();
-    }
-
-    @Override
-    public void onStartDrag(RecyclerView.ViewHolder viewHolder) {
-        itemTouchHelper.startDrag(viewHolder);
     }
     
     @Override
@@ -405,8 +448,50 @@ public class EnhancedEditActivity extends AppCompatActivity implements EnhancedE
             photos = gson.toJson(photosList);
             
             Log.d(TAG, "POI信息获取成功: " + attractionName);
+            
+            // 自动填充搜索框
+            if (searchAttractionEditText != null) {
+                searchAttractionEditText.setText(attractionName);
+                searchAttractionEditText.dismissDropDown();
+            }
         } else {
             Log.e(TAG, "POI信息获取失败，代码: " + rCode);
+        }
+    }
+
+    @Override
+    public void onExpandCollapse(int position, boolean isExpanded) {
+        // 处理折叠/展开事件
+        Log.d(TAG, "Day " + position + " " + (isExpanded ? "expanded" : "collapsed"));
+    }
+
+    @Override
+    public void onAttractionDeleted(ItineraryAttraction attraction) {
+        // 处理景点删除事件
+        collapsibleDayAdapter.removeAttraction(attraction);
+        Toast.makeText(this, "已删除景点: " + attraction.getAttractionName(), Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onDayEmpty(int dayNumber) {
+        // 处理天数为空的事件
+        Log.d(TAG, "Day " + dayNumber + " is now empty");
+    }
+    
+    @Override
+    public void onAttractionDayChanged(ItineraryAttraction attraction, int oldDayNumber, int newDayNumber) {
+        // 处理景点天数变更事件
+        Toast.makeText(this, "景点\"" + attraction.getAttractionName() + "\"已移动到第" + newDayNumber + "天", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        
+        // 确保每次返回到编辑界面时都会更新天数
+        if (itineraryId > 0 && dbHelper != null) {
+            boolean updated = dbHelper.updateItineraryDaysFromAttractions(itineraryId);
+            Log.d(TAG, "onResume中更新行程天数: " + (updated ? "成功" : "失败"));
         }
     }
 } 

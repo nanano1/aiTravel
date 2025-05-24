@@ -82,7 +82,6 @@ public class MyrouteItineraryAdapeter  extends RecyclerView.Adapter<MyrouteItine
 
     @Override
     public int getItemCount() {
-        Log.d("ItineraryAdapter", "Item count: " + items.size());
         return items.size();
     }
 
